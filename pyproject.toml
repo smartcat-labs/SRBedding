@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "srbedding"
+version = "0.1.0"
+description = ""
+authors = ["SelenaMilutin <selena.milutin@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+numpy = "^2.0.1"
+jupyter = "^1.0.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
