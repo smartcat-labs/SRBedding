@@ -163,6 +163,5 @@ cython_debug/
 
 
 # Large files inside of project
-deeplearning/models
-eval/datasets
+evaluation-pipetine-test/datasets
 

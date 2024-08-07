@@ -7,8 +7,23 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.10"
+scipy = "^1.14.0"
 numpy = "^2.0.1"
+pandas = "^2.2.2"
+scikit-learn = "^1.5.1"
+matplotlib = "^3.9.1.post1"
+transformers = "^4.44.0"
+torch = "^2.4.0"
+pytorch-transformers = "^1.2.0"
+sentence-transformers = "^3.0.1"
+seaborn = "^0.13.2"
+datasets = "^2.20.0"
 jupyter = "^1.0.0"
+debugpy = "^1.8.5"
+lxml = "^5.2.2"
+evaluate = "^0.4.2"
+pytrec-eval = "^0.5"
+
 
 
 [build-system]
