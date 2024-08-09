@@ -24,6 +24,7 @@ lxml = "^5.2.2"
 evaluate = "^0.4.2"
 pytrec-eval = "^0.5"
 openai = "^1.40.1"
+ipykernel = "^6.29.5"
 
 
 
