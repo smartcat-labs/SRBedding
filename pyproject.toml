@@ -29,6 +29,7 @@ tiktoken = "^0.7.0"
 python-dotenv = "^1.0.1"
 openai = "^1.40.3"
 yellowbrick = "^1.5"
+promptml = "^0.6.1"
 
 
 
