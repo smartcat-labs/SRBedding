@@ -26,6 +26,7 @@ pytrec-eval = "^0.5"
 openai = "^1.40.1"
 ipykernel = "^6.29.5"
 tiktoken = "^0.7.0"
+bertopic = "^0.16.3"
 
 
 
