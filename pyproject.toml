@@ -26,6 +26,9 @@ pytrec-eval = "^0.5"
 pyarrow = "^17.0.0"
 aiohttp = "^3.10.2"
 tiktoken = "^0.7.0"
+python-dotenv = "^1.0.1"
+openai = "^1.40.3"
+yellowbrick = "^1.5"
 
 
 
