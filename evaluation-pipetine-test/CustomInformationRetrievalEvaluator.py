@@ -1,4 +1,5 @@
 import heapq
+import json
 import logging
 import os
 from contextlib import nullcontext
@@ -302,6 +303,25 @@ class InformationRetrievalEvaluator(SentenceEvaluator):
             return embedded_text
         cut_dim = embedded_text[:dimension]
         return self.normalize_l2(cut_dim)
+    
+    def _make_embedding_dict(self, file_path):
+        returned_dict = {}
+        # Open and iterate through the .jsonl file
+        with open(file_path, 'r') as file:
+            for line in file:
+                data = json.loads(line)  # Load the JSON object from the line
+                # Process the data as needed
+                indx = data[-1]['id']
+                embedding = data[1]['data'][0]['embedding']
+                returned_dict[indx] = embedding
+        return returned_dict
+    
+    def get_embeddings_from_file(self, file_path, keys):
+        embeddings = []
+        embedding_dict = self._make_embedding_dict(file_path)
+        for key in keys:
+            embeddings.append(embedding_dict[key])
+        return embeddings
 
     def compute_metrices(
         self, model: "SentenceTransformer", corpus_model=None, corpus_embeddings: Tensor = None, openAI_model: str = None
@@ -320,8 +340,8 @@ class InformationRetrievalEvaluator(SentenceEvaluator):
         # Compute embedding for the queries
         # Dodato
         if openAI_model:
-            # query_embeddings = self.queries.apply(lambda x: self.get_embedding(x, model=openAI_model))
-            query_embeddings = [self.get_embedding(x, model=openAI_model) for x in self.queries]
+            # query_embeddings = [self.get_embedding(x, model=openAI_model) for x in self.queries]
+            query_embeddings = self.get_embeddings_from_file(f"datasets/{openAI_model}-queries.jsonl", self.queries_ids)
 
 
         else:
@@ -348,8 +368,8 @@ class InformationRetrievalEvaluator(SentenceEvaluator):
                 # Dodato
                 if openAI_model:
                     # query_embeddings = self.queries.apply(lambda x: self.get_embedding(x, model=openAI_model))
-                    sub_corpus_embeddings = [self.get_embedding(x, model=openAI_model) for x in self.corpus[corpus_start_idx:corpus_end_idx]]
-
+                    # sub_corpus_embeddings = [self.get_embedding(x, model=openAI_model) for x in self.corpus[corpus_start_idx:corpus_end_idx]]
+                    query_embeddings = self.get_embeddings_from_file(f"datasets/{openAI_model}-corpus.jsonl", self.corpus_ids)
 
                 else:
                     with nullcontext() if self.truncate_dim is None else corpus_model.truncate_sentence_embeddings(
