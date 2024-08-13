@@ -453,6 +453,30 @@ def task_id_generator_function():
 
 # run script
 
+def helper(requests_filepath, save_filepath, request_url, 
+           api_key, max_requests_per_minute=1500, max_tokens_per_minute=6250000,
+           token_encoding_name = 'cl100k_base', max_attempts = 5, logging_level = 20):
+    if save_filepath is None:
+        save_filepath = requests_filepath.replace(".jsonl", "_results.jsonl")
+
+    # run script
+    asyncio.run(
+        process_api_requests_from_file(
+            requests_filepath=requests_filepath,
+            save_filepath=save_filepath,
+            request_url=request_url,
+            api_key=api_key,
+            max_requests_per_minute=float(max_requests_per_minute),
+            max_tokens_per_minute=float(max_tokens_per_minute),
+            token_encoding_name=token_encoding_name,
+            max_attempts=int(max_attempts),
+            logging_level=int(logging_level),
+        )
+    )
+
+
+
+
 
 if __name__ == "__main__":
     # parse command line arguments

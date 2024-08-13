@@ -341,7 +341,7 @@ class InformationRetrievalEvaluator(SentenceEvaluator):
         # Dodato
         if openAI_model:
             # query_embeddings = [self.get_embedding(x, model=openAI_model) for x in self.queries]
-            query_embeddings = self.get_embeddings_from_file(f"datasets/{openAI_model}-queries.jsonl", self.queries_ids)
+            query_embeddings = self.get_embeddings_from_file(f"{openAI_model}-queries.jsonl", self.queries_ids)
 
 
         else:
@@ -369,7 +369,7 @@ class InformationRetrievalEvaluator(SentenceEvaluator):
                 if openAI_model:
                     # query_embeddings = self.queries.apply(lambda x: self.get_embedding(x, model=openAI_model))
                     # sub_corpus_embeddings = [self.get_embedding(x, model=openAI_model) for x in self.corpus[corpus_start_idx:corpus_end_idx]]
-                    query_embeddings = self.get_embeddings_from_file(f"datasets/{openAI_model}-corpus.jsonl", self.corpus_ids)
+                    sub_corpus_embeddings = self.get_embeddings_from_file(f"{openAI_model}-contexts.jsonl", self.corpus_ids)
 
                 else:
                     with nullcontext() if self.truncate_dim is None else corpus_model.truncate_sentence_embeddings(
