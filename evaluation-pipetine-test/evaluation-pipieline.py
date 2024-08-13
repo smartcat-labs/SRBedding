@@ -95,7 +95,7 @@ def save_jobs(data_pair: Dict[int, str], filename: Path, model: str = "text-embe
             ]
     with open(filename, "w", encoding="UTF-8") as f:
         for job in jobs:
-            json_string = json.dumps(job)
+            json_string = json.dumps(job, ensure_ascii=False)
             f.write(json_string + "\n")
 
 
