@@ -1,3 +1,4 @@
+from datetime import datetime
 import heapq
 import json
 import logging
@@ -190,8 +191,10 @@ class InformationRetrievalEvaluator(SentenceEvaluator):
         if name:
             name = "_" + name
 
-        self.csv_file: str = "Information-Retrieval_evaluation" + name + "_results.csv"
+        self.csv_file: str = "Information-Retrieval_evaluation" + name + ".csv"
         self.csv_headers = ["epoch", "steps"]
+
+        self.csv_headers.append("Date")
 
         for score_name in self.score_function_names:
             for k in accuracy_at_k:
@@ -239,7 +242,11 @@ class InformationRetrievalEvaluator(SentenceEvaluator):
             else:
                 fOut = open(csv_path, mode="a", encoding="utf-8")
 
-            output_data = [epoch, steps]
+
+            now = datetime.now()
+
+            time_string = now.strftime('%Y-%m-%d %H:%M:%S')
+            output_data = [epoch, steps, now]
             for name in self.score_function_names:
                 for k in self.accuracy_at_k:
                     output_data.append(scores[name]["accuracy@k"][k])
@@ -339,8 +346,7 @@ class InformationRetrievalEvaluator(SentenceEvaluator):
 
         # Compute embedding for the queries
         # Dodato
-        if openAI_model:
-            # query_embeddings = [self.get_embedding(x, model=openAI_model) for x in self.queries]
+        if not model:
             query_embeddings = self.get_embeddings_from_file(f"{openAI_model}-queries.jsonl", self.queries_ids)
 
 
@@ -366,9 +372,7 @@ class InformationRetrievalEvaluator(SentenceEvaluator):
             # Encode chunk of corpus
             if corpus_embeddings is None:
                 # Dodato
-                if openAI_model:
-                    # query_embeddings = self.queries.apply(lambda x: self.get_embedding(x, model=openAI_model))
-                    # sub_corpus_embeddings = [self.get_embedding(x, model=openAI_model) for x in self.corpus[corpus_start_idx:corpus_end_idx]]
+                if not model:
                     sub_corpus_embeddings = self.get_embeddings_from_file(f"{openAI_model}-contexts.jsonl", self.corpus_ids)
 
                 else:
