@@ -163,6 +163,6 @@ cython_debug/
 
 
 # Large files inside of project
-deeplearning/models
-eval/datasets
+*/datasets
+*/results
 
