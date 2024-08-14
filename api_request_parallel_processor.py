@@ -92,6 +92,7 @@ The script is structured as follows:
 """
 
 # imports
+from pathlib import Path
 import aiohttp  # for making API calls concurrently
 import argparse  # for running script from command line
 import asyncio  # for running API calls concurrently
@@ -450,7 +451,50 @@ def task_id_generator_function():
         yield task_id
         task_id += 1
 
+def run_api_request_processor(
+    requests_filepath: Path,
+    save_filepath: Path,
+    request_url: str,
+    max_requests_per_minute: int = 400,
+    max_tokens_per_minute: int = 1_250_000,
+    token_encoding_name: str = 'cl100k_base',
+    max_attempts: int = 5,
+    logging_level: int = 20,
+) -> None:
+    """
+    Processes API requests from a file and saves the responses.
 
+    This function reads requests from a specified file, sends them to an API endpoint, and writes the 
+    responses to an output file. It manages request limits and retries to handle API rate limits and 
+    potential request failures. The function uses asynchronous processing to efficiently handle multiple 
+    requests.
+
+    Args:
+        requests_filepath (Path): The file path of the input file containing the API requests to be processed.
+        save_filepath (Path): The file path where the API responses will be saved.
+        request_url (str): The URL of the API endpoint to send requests to.
+        max_requests_per_minute (int, optional): The maximum number of requests to send per minute. Defaults to 1500.
+        max_tokens_per_minute (int, optional): The maximum number of tokens to process per minute. Defaults to 6250000.
+        token_encoding_name (str, optional): The name of the token encoding to use. Defaults to 'cl100k_base'.
+        max_attempts (int, optional): The maximum number of attempts to retry a failed request. Defaults to 5.
+        logging_level (int, optional): The logging level to use for the process. Defaults to 20 (INFO level).
+    
+    Returns:
+        None
+    """
+    asyncio.run(
+        process_api_requests_from_file(
+            requests_filepath=requests_filepath,
+            save_filepath=save_filepath,
+            request_url=request_url,
+            api_key=os.getenv("OPENAI_API_KEY"),
+            max_requests_per_minute=float(max_requests_per_minute),
+            max_tokens_per_minute=float(max_tokens_per_minute),
+            token_encoding_name=token_encoding_name,
+            max_attempts=int(max_attempts),
+            logging_level=int(logging_level),
+        )
+    )
 # run script
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
-import asyncio
 import os
+import sys
 from typing import Dict
 from dotenv import load_dotenv
 import pyarrow.parquet as pq
@@ -13,56 +13,12 @@ import json
 import CustomInformationRetrievalEvaluator
 from pprint import pprint
 import warnings
-from api_request_parallel_processor import process_api_requests_from_file
 from pathlib import Path
 warnings.filterwarnings('ignore')
 
+sys.path.append("..")
+from api_request_parallel_processor import run_api_request_processor
 
-
-def run_api_request_processor(
-    requests_filepath: Path,
-    save_filepath: Path,
-    request_url: str,
-    max_requests_per_minute: int = 400,
-    max_tokens_per_minute: int = 1_250_000,
-    token_encoding_name: str = 'cl100k_base',
-    max_attempts: int = 5,
-    logging_level: int = 20,
-) -> None:
-    """
-    Processes API requests from a file and saves the responses.
-
-    This function reads requests from a specified file, sends them to an API endpoint, and writes the 
-    responses to an output file. It manages request limits and retries to handle API rate limits and 
-    potential request failures. The function uses asynchronous processing to efficiently handle multiple 
-    requests.
-
-    Args:
-        requests_filepath (Path): The file path of the input file containing the API requests to be processed.
-        save_filepath (Path): The file path where the API responses will be saved.
-        request_url (str): The URL of the API endpoint to send requests to.
-        max_requests_per_minute (int, optional): The maximum number of requests to send per minute. Defaults to 1500.
-        max_tokens_per_minute (int, optional): The maximum number of tokens to process per minute. Defaults to 6250000.
-        token_encoding_name (str, optional): The name of the token encoding to use. Defaults to 'cl100k_base'.
-        max_attempts (int, optional): The maximum number of attempts to retry a failed request. Defaults to 5.
-        logging_level (int, optional): The logging level to use for the process. Defaults to 20 (INFO level).
-    
-    Returns:
-        None
-    """
-    asyncio.run(
-        process_api_requests_from_file(
-            requests_filepath=requests_filepath,
-            save_filepath=save_filepath,
-            request_url=request_url,
-            api_key=os.getenv("OPENAI_API_KEY"),
-            max_requests_per_minute=float(max_requests_per_minute),
-            max_tokens_per_minute=float(max_tokens_per_minute),
-            token_encoding_name=token_encoding_name,
-            max_attempts=int(max_attempts),
-            logging_level=int(logging_level),
-        )
-    )
 
 
 def save_jobs(data_pair: Dict[int, str], filename: Path, model: str = "text-embedding-3-small") -> None:    
@@ -126,7 +82,7 @@ def get_data_for_evaluation(dataset_name: Path) -> tuple:
     relevant_docs = {}
     query_idx = 1
     for idx, row in df.iterrows():
-        if idx >= 100:  # Break the loop after two iterations
+        if idx >= 10:  # Break the loop after two iterations
             break
         contexts[idx] = row['context']
         for query in row['queries']:
@@ -237,7 +193,7 @@ if __name__ == "__main__":
     load_dotenv()
     openai.api_key = os.getenv("OPENAI_API_KEY")
 
-    # save_contexts_query_jobs("datasets/squad_processed.parquet")
+    save_contexts_query_jobs("datasets/squad_processed.parquet")
 
     datasets = [Path("datasets/squad_processed.parquet")]
 
@@ -245,7 +201,7 @@ if __name__ == "__main__":
     "google-bert/bert-base-multilingual-cased": False,
     "datasets/text-embedding-3-small-squad" : True   
     }
-    print(models_.keys())
+
     for dataset_name in datasets:
         for model_name in models_.keys():
             res = evaluate(model_name=model_name, dataset_name=dataset_name, is_openAI=models_[model_name])
