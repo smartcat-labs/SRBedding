@@ -40,7 +40,8 @@ def get_wiki_sentences():
 
 def get_news_sentences():
     dataset = load_datset_with_cashe("jerteh/SrpKorNews")
-    return create_sentences(dataset)
+    text_news = dataset['train']['text']
+    return create_sentences(text_news)
 
 
 def get_sience_sentences():
