@@ -166,4 +166,5 @@ cython_debug/
 */datasets
 */results
 */output
+*/commands
 

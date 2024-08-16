@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List
 import pandas as pd
 import os
@@ -84,6 +85,7 @@ def save_jobs(sentences, filename, prompt_template, model: str = "gpt-3.5-turbo-
             }
                 for sentence in sentences
             ]
+    print(f"Jobs len: {len(jobs)}")
     with open(filename, "w", encoding='UTF-8') as f:
         for job in jobs:
             json_string = json.dumps(job, ensure_ascii=False)
@@ -115,25 +117,36 @@ def make_dataset_data(file_path: Path):
                 returned_dict['long_query'].append(returned_data['long_query'])
                 returned_dict['keywords'].append(returned_data['keywords'])
                 returned_dict['scores'].append(returned_data['scores'])
+        print(f"returned dict len: {len(returned_dict['context'])}")
+        
         return returned_dict
 
 def make_dataset(processed_commands: Path, save_filepath: Path): 
     data_for_df = make_dataset_data(Path(processed_commands))
     dataset = pd.DataFrame(data_for_df)
-    print(dataset.head())
+    # print(dataset.head())
     table = pa.Table.from_pandas(dataset)
     pq.write_table(table, save_filepath)
 
-def run(contexts: List[str], save_filepath: Path):
-    load_dotenv()
-    openai.api_key = os.getenv("OPENAI_API_KEY")
+def get_timestamp() -> str:
+    now = datetime.now()
+    return now.strftime("%d-%m-%Y_%H-%M-%S")
 
-    command_path = Path("datasets/training_comands.ljson")
-    processed_command_path = Path("datasets/processed_commands.ljson")
+def run(contexts: List[str], save_filepath: Path):
+    environment_setup()
+
+    timestamp = get_timestamp()
+    dataset_name = save_filepath.stem
+    command_path = Path(f"commands/comands_{dataset_name}_{timestamp}.ljson")
+    processed_command_path = Path(f"commands/processed_commands_{dataset_name}_{timestamp}.ljson")
     
     save_jobs(contexts, command_path, PROMPT)
     run_api_request_processor(requests_filepath=command_path, save_filepath=processed_command_path, request_url="https://api.openai.com/v1/chat/completions")
     make_dataset(processed_commands=processed_command_path, save_filepath=save_filepath)
+
+def environment_setup():
+    load_dotenv()
+    openai.api_key = os.getenv("OPENAI_API_KEY")
 
 
 if __name__ == "__main__":
