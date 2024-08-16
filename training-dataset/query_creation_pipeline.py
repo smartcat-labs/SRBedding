@@ -132,7 +132,7 @@ def get_timestamp() -> str:
     now = datetime.now()
     return now.strftime("%d-%m-%Y_%H-%M-%S")
 
-def run(contexts: List[str], save_filepath: Path):
+def generate_query(contexts: List[str], save_filepath: Path):
     environment_setup()
 
     timestamp = get_timestamp()
@@ -153,4 +153,4 @@ if __name__ == "__main__":
      contexts = ["Pajton je veoma popularan programski jezik opšte namene. Postao je poznat po svojoj jednostavnosti, lakoći učenja i brzini programiranja. Mnogi profesionalni programeri koriste Pajton bar kao pomoćni jezik, jer pomoću njega brzo i lako automatizuju razne poslove. ",
                  "Za izvršavanje programa koje pišemo na Pajtonu, potreban nam je program koji se zove Pajton interpreter. Ovaj program tumači (interpretira), a zatim i izvršava Pajton naredbe. Pajton interpreteri mogu da prihvate cele programe i da ih izvrše, a mogu da rade i u interaktivnom režimu, ",
                  "Još jedan način da pokrenete Pajton školjku je da otvorite komandni prozor (na Windows sistemima to se radi pokretanjem programa cmd), a zatim u komandnom prozoru otkucate Python (ovde podrazumevamo da je Pajton instaliran tako da je dostupan iz svakog foldera, u protivnom treba se prvo pozicionirati u folder u kome se nalazi Pajton interpreter)."]
-     run(contexts=contexts, save_filepath=Path("datasets/train.parquet"))
+     generate_query(contexts=contexts, save_filepath=Path("datasets/train.parquet"))

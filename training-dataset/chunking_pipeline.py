@@ -9,7 +9,9 @@ import tiktoken
 from sklearn.metrics.pairwise import cosine_similarity
 from pprint import pprint
 from statistics import median
-from langchain.embeddings import OpenAIEmbeddings
+from langchain_community.embeddings import OpenAIEmbeddings
+
+oaiembeds = OpenAIEmbeddings(model='text-embedding-3-small')
 
 def return_dic(sentences):
     sent_lst_dic = [{'sentence': x, 'id' : i} for i, x in enumerate(sentences)]
@@ -136,7 +138,7 @@ if __name__== "__main__":
 
     # set environment
     openai.api_key = os.getenv("OPENAI_API_KEY")
-    oaiembeds = OpenAIEmbeddings(model='text-embedding-3-small')
+    
 
     contexts = ["Pajton je veoma popularan programski jezik opšte namene. Postao je poznat po svojoj jednostavnosti, lakoći učenja i brzini programiranja. Mnogi profesionalni programeri koriste Pajton bar kao pomoćni jezik, jer pomoću njega brzo i lako automatizuju razne poslove. ",
                  "Za izvršavanje programa koje pišemo na Pajtonu, potreban nam je program koji se zove Pajton interpreter. Ovaj program tumači (interpretira), a zatim i izvršava Pajton naredbe. Pajton interpreteri mogu da prihvate cele programe i da ih izvrše, a mogu da rade i u interaktivnom režimu, ",

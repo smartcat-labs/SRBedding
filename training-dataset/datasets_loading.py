@@ -41,7 +41,7 @@ def get_literature_sentences():
 
 
 def get_datasets():
-    datasets = {
+    return {
         "wiki": {
             "loading_function": get_wiki_sentences,
             "final_lenght": 8_000,
@@ -71,4 +71,3 @@ def get_datasets():
             "random_step_start": 0
         },
     }
-    return datasets
