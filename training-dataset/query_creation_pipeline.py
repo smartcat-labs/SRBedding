@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List
+from typing import Any, Dict, List
 import pandas as pd
 import os
 from dotenv import load_dotenv
@@ -67,7 +67,31 @@ One query has to ask for only one information from the context.
 {context}
 """
 
-def save_jobs(sentences, filename, prompt_template, model: str = "gpt-3.5-turbo-0125"):    
+def save_jobs(sentences: List[str], filename: Path, prompt_template: str, model: str = "gpt-3.5-turbo-0125") -> None:  
+    """
+    Saves a list of sentences as formatted jobs into a specified .jsonl file.
+
+    This function creates a list of job dictionaries where each job contains:
+    - The model to be used (default: "gpt-3.5-turbo-0125").
+    - The response format, which is set to a JSON object.
+    - A temperature setting for the model (default: 0).
+    - Metadata containing the context, which is the sentence.
+    - A message formatted using the provided prompt template.
+
+    The jobs are saved line by line in a JSON format to the specified file.
+
+    Args:
+        sentences (List[str]): A list of sentences to be used as context for each job.
+        filename (Path): The path to the .jsonl file where the jobs will be saved.
+        prompt_template (str): A template string for generating the message content.
+        model (str, optional): The model to be specified for each job. Defaults to "gpt-3.5-turbo-0125".
+
+    Returns:
+        None
+
+    Example:
+        >>> save_jobs(["sentence1", "sentence2"], Path("output.jsonl"), "Process this: {context}")
+    """ 
     jobs = [
                 {
                 "model": model,
@@ -85,17 +109,37 @@ def save_jobs(sentences, filename, prompt_template, model: str = "gpt-3.5-turbo-
             }
                 for sentence in sentences
             ]
-    print(f"Jobs len: {len(jobs)}")
     with open(filename, "w", encoding='UTF-8') as f:
         for job in jobs:
             json_string = json.dumps(job, ensure_ascii=False)
             f.write(json_string + "\n")
 
+def make_dataset_data(file_path: Path) -> Dict[str, List[Any]]:
+        """
+        Processes a .jsonl file to create a dataset dictionary.
 
+        This function reads a .jsonl file where each line contains a JSON object. It extracts 
+        specific fields from the JSON objects and organizes them into a dictionary with keys 
+        such as 'context', 'short_query', 'medium_query', 'long_query', 'keywords', and 'scores'.
 
+        The resulting dictionary contains lists of values corresponding to each key, which can 
+        be used as a dataset for further processing or model training.
 
+        Args:
+            file_path (Path): The path to the .jsonl file containing the data.
 
-def make_dataset_data(file_path: Path):
+        Returns:
+            Dict[str, List]: A dictionary with the following keys:
+                - 'context': List of context strings extracted from the file.
+                - 'short_query': List of short query strings extracted from the file.
+                - 'medium_query': List of medium query strings extracted from the file.
+                - 'long_query': List of long query strings extracted from the file.
+                - 'keywords': List of keyword lists extracted from the file.
+                - 'scores': List of Dict scores extracted from the file.
+
+        Example:
+            >>> dataset = make_dataset_data(Path("data.jsonl"))
+        """
         returned_dict = {
              "context": [],
              "short_query": [],
@@ -117,34 +161,98 @@ def make_dataset_data(file_path: Path):
                 returned_dict['long_query'].append(returned_data['long_query'])
                 returned_dict['keywords'].append(returned_data['keywords'])
                 returned_dict['scores'].append(returned_data['scores'])
-        print(f"returned dict len: {len(returned_dict['context'])}")
         
         return returned_dict
 
 def make_dataset(processed_commands: Path, save_filepath: Path): 
+    """
+    Creates and saves a dataset from processed commands.
+
+    This function reads processed command data from a .jsonl file, converts it into a 
+    pandas DataFrame, and then saves it as a Parquet file. The DataFrame is created 
+    using the `make_dataset_data` function, and the resulting dataset is saved to 
+    the specified file path in Parquet format.
+
+    Args:
+        processed_commands (Path): The path to the .jsonl file containing the processed commands.
+        save_filepath (Path): The path where the resulting dataset will be saved in Parquet format.
+
+    Returns:
+        None
+
+    Example:
+        >>> make_dataset(Path("commands.jsonl"), Path("dataset.parquet"))
+    """
     data_for_df = make_dataset_data(Path(processed_commands))
     dataset = pd.DataFrame(data_for_df)
-    # print(dataset.head())
     table = pa.Table.from_pandas(dataset)
     pq.write_table(table, save_filepath)
 
 def get_timestamp() -> str:
+    """
+    Returns the current timestamp as a formatted string.
+
+    This function generates the current date and time, formatted as a string in the 
+    format 'DD-MM-YYYY_HH-MM-SS'. It can be useful for creating unique filenames 
+    or logging events with a timestamp.
+
+    Returns:
+        str: The current timestamp in 'DD-MM-YYYY_HH-MM-SS' format.
+
+    Example:
+        >>> timestamp = get_timestamp()
+        >>> print(timestamp)
+        '18-08-2024_15-45-30'
+    """
     now = datetime.now()
     return now.strftime("%d-%m-%Y_%H-%M-%S")
 
 def generate_query(contexts: List[str], save_filepath: Path):
+    """
+    Generates a dataset of queries based on given contexts and saves it to a specified file.
+
+    This function processes a list of contexts to create a dataset of queries using an API. 
+    It performs the following steps:
+    1. Sets up the environment (e.g., loads API keys).
+    2. Generates a unique timestamped filename for saving commands and processed commands.
+    3. Saves the initial commands in a .jsonl file.
+    4. Sends the commands to the OpenAI API to get processed commands.
+    5. Converts the processed commands into a dataset and saves it as a Parquet file.
+
+    Args:
+        contexts (List[str]): A list of context strings to generate queries from.
+        save_filepath (Path): The path where the resulting dataset will be saved in Parquet format.
+
+    Returns:
+        None
+
+    Example:
+        >>> generate_query(["Context 1", "Context 2"], Path("dataset.parquet"))
+    """
     environment_setup()
 
     timestamp = get_timestamp()
     dataset_name = save_filepath.stem
-    command_path = Path(f"commands/comands_{dataset_name}_{timestamp}.ljson")
-    processed_command_path = Path(f"commands/processed_commands_{dataset_name}_{timestamp}.ljson")
+    command_path = Path(f"commands/comands_{dataset_name}_{timestamp}.jsonl")
+    processed_command_path = Path(f"commands/processed_commands_{dataset_name}_{timestamp}.jsonl")
     
     save_jobs(contexts, command_path, PROMPT)
     run_api_request_processor(requests_filepath=command_path, save_filepath=processed_command_path, request_url="https://api.openai.com/v1/chat/completions")
     make_dataset(processed_commands=processed_command_path, save_filepath=save_filepath)
 
 def environment_setup():
+    """
+    Sets up the environment by loading environment variables and configuring the OpenAI API key.
+
+    This function loads environment variables from a `.env` file and sets the OpenAI API key 
+    using the `OPENAI_API_KEY` environment variable. It should be called before making API requests.
+
+    Returns:
+        None
+
+    Example:
+        >>> environment_setup()
+    """
     load_dotenv()
     openai.api_key = os.getenv("OPENAI_API_KEY")
 
