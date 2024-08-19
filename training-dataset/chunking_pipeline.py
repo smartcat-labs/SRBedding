@@ -93,7 +93,7 @@ def generate_embeddings(sentences: List[Dict[str,str]]) -> List[Dict[str,str]]:
     for i, sentence in enumerate(sentences):
         sentence['combined_sentence_embedding'] = embeddings[i]
     
-    return sentence
+    return sentences
 
 def calculate_cosine_distances(sentences: List[Dict[str,str]]) -> tuple[List[int], List[str]]:
     """
