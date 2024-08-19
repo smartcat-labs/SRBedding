@@ -234,7 +234,7 @@ def get_threshold(distances: List[int], sentences: List[str]) -> int:
 
         median_length = median(chunk_lengths)
 
-        if median_length > 90:
+        if median_length > 110:
             return threshold
  
     return 90
@@ -263,7 +263,7 @@ def split_chunk(big_chunk: str) -> List[str]:
     current_sentence = ""
     for sentence in sentences:
         token_size = num_tokens_from_string(current_sentence, 'cl100k_base')
-        if 50 < token_size <450:
+        if 80 < token_size <450:
             splits.append(current_sentence)
             current_sentence = ''
         elif token_size>=450:
@@ -298,7 +298,7 @@ def get_filtered_chunks(chunks: List[str]) -> List[str]:
     filtered = []
     for chunk in chunks:
         token_num = num_tokens_from_string(chunk, 'cl100k_base')
-        if token_num < 50:
+        if token_num < 80:
             continue
         if token_num < 450:
             filtered.append(chunk)
