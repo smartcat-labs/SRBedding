@@ -41,13 +41,13 @@ One query has to ask for only one information from the context.
    - A question that starts with a capial letter and ends with a question mark (?).
    - A statement that starts with a capital letter and ends with a period (.).
 ### Score description ###
-   - A score is a similarity between the context and a query. You must output a score for each query.
+   - A score is a relatedness of the context and a query. You must output a score for each query. You must score each query objectively and without bias.
    - A score must be on a scale from 1 to 5, where:
-      - 1 = not similar at all
-      - 2 = vaguely similar
-      - 3 = moderately similar
-      - 4 = almost completely similar
-      - 5 = completely similar
+        - 1 = The answer cannot be found in the context.
+        - 2 = The answer is unclear from the context. The information in the context is scarse making the answer difficult to determine.
+        - 3 = Inferring the answer from the context requires interpretation. The context provides some relevant information.
+        - 4 = The answer is intelligible from the context. The context provides sufficient information to understand the answer.
+        - 5 = The answer is directly and explicitly provided in the context.
 
 ### Output Format ###
 {{
@@ -66,6 +66,13 @@ One query has to ask for only one information from the context.
 ### Context ###
 {context}
 """
+
+        
+        # - 1 = A human could not find the answer from the context.
+        # - 2 = A human would have diffictuly deriving the answer from the context.
+        # - 3 = A human could interpret the answer from the context.
+        # - 4 = A human could easily derive the answer from the context.
+        # - 5 = A human could immediatly give the answer from the context.
 
 def save_jobs(sentences: List[str], filename: Path, prompt_template: str, model: str = "gpt-3.5-turbo-0125") -> None:  
     """
