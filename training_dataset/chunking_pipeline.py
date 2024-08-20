@@ -95,12 +95,12 @@ def _make_embedding_dict(file_path):
 
 def save_combined_embeddings_jobs(sentences: List[Dict[str,str]], model_name: str = "text-embedding-3-small") -> None:
 
-    sentence_path = "datasets/cobined_sentences.jsonl"
-    saved_path = "datasets/combined_sentences_embeddings.jsonl"
+    sentence_path = Path("datasets/cobined_sentences.jsonl")
+    saved_path = Path("datasets/combined_sentences_embeddings.jsonl")
+    saved_path.parent.mkdir(parents=True, exist_ok=True)
     save_jobs(sentences, sentence_path)
     run_api_request_processor(sentence_path, saved_path, "https://api.openai.com/v1/embeddings")
     return _make_embedding_dict(saved_path)
-
 
 def generate_embeddings(sentences: List[Dict[str,str]]) -> List[Dict[str,str]]:
     """
