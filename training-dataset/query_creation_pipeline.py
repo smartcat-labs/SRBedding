@@ -103,7 +103,7 @@ def save_jobs(sentences: List[str], filename: Path, prompt_template: str, model:
                 "model": model,
                 "response_format": {'type': 'json_object'},
                 "temperature": 0,
-                "metadata": {"context": sentence},
+                "metadata": {"context": index},
                 "messages": [
                     {
                         "role": "system",
@@ -113,39 +113,15 @@ def save_jobs(sentences: List[str], filename: Path, prompt_template: str, model:
                     }
                 ],
             }
-                for sentence in sentences
+                for index, sentence in enumerate(sentences)
             ]
     with open(filename, "w", encoding='UTF-8') as f:
         for job in jobs:
             json_string = json.dumps(job, ensure_ascii=False)
             f.write(json_string + "\n")
 
-def make_dataset_data(file_path: Path) -> Dict[str, List[Any]]:
-        """
-        Processes a .jsonl file to create a dataset dictionary.
-
-        This function reads a .jsonl file where each line contains a JSON object. It extracts 
-        specific fields from the JSON objects and organizes them into a dictionary with keys 
-        such as 'context', 'short_query', 'medium_query', 'long_query', 'keywords', and 'scores'.
-
-        The resulting dictionary contains lists of values corresponding to each key, which can 
-        be used as a dataset for further processing or model training.
-
-        Args:
-            file_path (Path): The path to the .jsonl file containing the data.
-
-        Returns:
-            Dict[str, List]: A dictionary with the following keys:
-                - 'context': List of context strings extracted from the file.
-                - 'short_query': List of short query strings extracted from the file.
-                - 'medium_query': List of medium query strings extracted from the file.
-                - 'long_query': List of long query strings extracted from the file.
-                - 'keywords': List of keyword lists extracted from the file.
-                - 'scores': List of Dict scores extracted from the file.
-
-        Example:
-            >>> dataset = make_dataset_data(Path("data.jsonl"))
-        """
+def make_dataset(processed_commands_path: Path, contexts: List[str], save_path: Path) -> None:
+        
         returned_dict = {
              "context": [],
              "short_query": [],
@@ -155,10 +131,11 @@ def make_dataset_data(file_path: Path) -> Dict[str, List[Any]]:
              "scores": []
         }
         # Open and iterate through the .jsonl file
-        with open(file_path, 'r', encoding='utf8') as file:
+        with open(processed_commands_path, 'r', encoding='utf8') as file:
             for line in file:
                 data = json.loads(line)
-                context = data[-1]['context']
+                context_id = data[-1]['context']
+                context = contexts[context_id]
                 returned_data = data[1]['choices'][0]['message']['content']
                 returned_data = json.loads(returned_data)
                 returned_dict['context'].append(context)
@@ -168,31 +145,35 @@ def make_dataset_data(file_path: Path) -> Dict[str, List[Any]]:
                 returned_dict['keywords'].append(returned_data['keywords'])
                 returned_dict['scores'].append(returned_data['scores'])
         
+        dataset = pd.DataFrame(returned_dict)
+        dataset.to_parquet
+        table = pa.Table.from_pandas(dataset)
+        pq.write_table(table, save_path)
         return returned_dict
 
-def make_dataset(processed_commands: Path, save_filepath: Path): 
-    """
-    Creates and saves a dataset from processed commands.
+# def make_dataset(processed_commands: Path, save_filepath: Path, contexts: List[str]): 
+#     """
+#     Creates and saves a dataset from processed commands.
 
-    This function reads processed command data from a .jsonl file, converts it into a 
-    pandas DataFrame, and then saves it as a Parquet file. The DataFrame is created 
-    using the `make_dataset_data` function, and the resulting dataset is saved to 
-    the specified file path in Parquet format.
+#     This function reads processed command data from a .jsonl file, converts it into a 
+#     pandas DataFrame, and then saves it as a Parquet file. The DataFrame is created 
+#     using the `make_dataset_data` function, and the resulting dataset is saved to 
+#     the specified file path in Parquet format.
 
-    Args:
-        processed_commands (Path): The path to the .jsonl file containing the processed commands.
-        save_filepath (Path): The path where the resulting dataset will be saved in Parquet format.
+#     Args:
+#         processed_commands (Path): The path to the .jsonl file containing the processed commands.
+#         save_filepath (Path): The path where the resulting dataset will be saved in Parquet format.
 
-    Returns:
-        None
+#     Returns:
+#         None
 
-    Example:
-        >>> make_dataset(Path("commands.jsonl"), Path("dataset.parquet"))
-    """
-    data_for_df = make_dataset_data(Path(processed_commands))
-    dataset = pd.DataFrame(data_for_df)
-    table = pa.Table.from_pandas(dataset)
-    pq.write_table(table, save_filepath)
+#     Example:
+#         >>> make_dataset(Path("commands.jsonl"), Path("dataset.parquet"))
+#     """
+#     data_for_df = make_dataset_data(Path(processed_commands), contexts)
+#     dataset = pd.DataFrame(data_for_df)
+#     table = pa.Table.from_pandas(dataset)
+#     pq.write_table(table, save_filepath)
 
 def get_timestamp() -> str:
     """
@@ -247,7 +228,7 @@ def generate_query(contexts: List[str], save_filepath: Path):
     
     save_jobs(contexts, command_path, PROMPT)
     run_api_request_processor(requests_filepath=command_path, save_filepath=processed_command_path, request_url="https://api.openai.com/v1/chat/completions")
-    make_dataset(processed_commands=processed_command_path, save_filepath=save_filepath)
+    make_dataset(processed_commands_path=processed_command_path, save_path=save_filepath, contexts=contexts)
 
 def environment_setup():
     """
