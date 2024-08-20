@@ -1,7 +1,8 @@
-from typing import Any, Dict, List
-from datasets import load_dataset, Dataset
 import re
 from pathlib import Path
+from typing import Any, Dict, List
+
+from datasets import Dataset, load_dataset
 
 
 def create_sentences(texts: List[str]) -> List[str]:

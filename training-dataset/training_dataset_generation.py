@@ -1,9 +1,11 @@
-from pathlib import Path
 import random
+from pathlib import Path
 from typing import List
+
+from chunking_pipeline import get_chunks
 from datasets_loading import get_datasets
 from query_creation_pipeline import generate_query
-from chunking_pipeline import get_chunks
+
 
 def make_subset_from_all_sentences(all_sentences: List[str], final_lenght: int, chunked_lenght:int, random_step: int, random_step_start: int = 2000) -> List[str]:
     """

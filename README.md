@@ -15,7 +15,6 @@ Then run
 
 
 ## Training dataset creation  
-Inside od training-dataset folder add `datasets` and `commands` folder  
-For creating the training dataset run  
-`cd training-dataset`  
-`python .\training_dataset_generation.py`  
+Run the following commands for creating the training dataset:    
+- `cd training-dataset`  
+- `python .\training_dataset_generation.py`  

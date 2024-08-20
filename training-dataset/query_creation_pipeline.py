@@ -1,19 +1,18 @@
-from datetime import datetime
-from typing import Any, Dict, List
-import pandas as pd
+import json
 import os
-from dotenv import load_dotenv
+import sys
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List
+
+import openai
+import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
-import openai
-import os
-import json
-from pathlib import Path
-import sys
+from dotenv import load_dotenv
 
 sys.path.append("..")
 from api_request_parallel_processor import run_api_request_processor
-
 
 PROMPT = """
 ### Goal ###
@@ -242,6 +241,9 @@ def generate_query(contexts: List[str], save_filepath: Path):
     dataset_name = save_filepath.stem
     command_path = Path(f"commands/comands_{dataset_name}_{timestamp}.jsonl")
     processed_command_path = Path(f"commands/processed_commands_{dataset_name}_{timestamp}.jsonl")
+
+    command_path.parent.mkdir(parents=True, exist_ok=True)
+    save_filepath.parent.mkdir(parents=True, exist_ok=True)
     
     save_jobs(contexts, command_path, PROMPT)
     run_api_request_processor(requests_filepath=command_path, save_filepath=processed_command_path, request_url="https://api.openai.com/v1/chat/completions")
