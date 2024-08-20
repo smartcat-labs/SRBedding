@@ -1,24 +1,20 @@
 import asyncio
 import json
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 from pprint import pprint
 
 import openai
-import sentence_transformers
-import transformers
-from datasets import load_dataset
-from openai import OpenAI
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
-
-from api_request_parallel_processor import process_api_requests_from_file 
-
-sys.path.append("/..")
-from prompts import SYSTEM_PROMPT # this could be a problem
-
+import sentence_transformers
+import transformers
+from api_request_parallel_processor import process_api_requests_from_file
+from datasets import load_dataset
+from openai import OpenAI
+from prompts import SYSTEM_PROMPT
 
 
 def run_api_request_processor(
@@ -89,7 +85,7 @@ def load_data(
     dataset_name="microsoft/ms_marco",
 ):  # Make it a config variable + type hint
     datasets_dir = make_cache_dir()
-    data = load_dataset("microsoft/ms_marco", "v1.1", cache_dir=datasets_dir)
+    data = load_dataset(dataset_name, "v1.1", cache_dir=datasets_dir)
     data_test_split = data["test"]
     ms_marco = data_test_split.select_columns(["passages", "query", "query_id"])
 
@@ -139,11 +135,6 @@ def save_in_file(path):
     pq.write_table(table, 'datasets/train.parquet')
 
 if __name__ == "__main__":
-    # 1. load data
-    # 2. Make jobs
-    # 3. Write jobs to file, jsonl
-    # 4. make requests to OpenAI API in parallel
-    # Save to parquet in your format
 
     client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
     model = "gpt-3.5-turbo-0125"
