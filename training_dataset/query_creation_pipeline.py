@@ -3,12 +3,10 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import List
 
 import openai
 import pandas as pd
-import pyarrow as pa
-import pyarrow.parquet as pq
 from dotenv import load_dotenv
 
 sys.path.append("..")
@@ -146,34 +144,7 @@ def make_dataset(processed_commands_path: Path, contexts: List[str], save_path: 
                 returned_dict['scores'].append(returned_data['scores'])
         
         dataset = pd.DataFrame(returned_dict)
-        dataset.to_parquet
-        table = pa.Table.from_pandas(dataset)
-        pq.write_table(table, save_path)
-        return returned_dict
-
-# def make_dataset(processed_commands: Path, save_filepath: Path, contexts: List[str]): 
-#     """
-#     Creates and saves a dataset from processed commands.
-
-#     This function reads processed command data from a .jsonl file, converts it into a 
-#     pandas DataFrame, and then saves it as a Parquet file. The DataFrame is created 
-#     using the `make_dataset_data` function, and the resulting dataset is saved to 
-#     the specified file path in Parquet format.
-
-#     Args:
-#         processed_commands (Path): The path to the .jsonl file containing the processed commands.
-#         save_filepath (Path): The path where the resulting dataset will be saved in Parquet format.
-
-#     Returns:
-#         None
-
-#     Example:
-#         >>> make_dataset(Path("commands.jsonl"), Path("dataset.parquet"))
-#     """
-#     data_for_df = make_dataset_data(Path(processed_commands), contexts)
-#     dataset = pd.DataFrame(data_for_df)
-#     table = pa.Table.from_pandas(dataset)
-#     pq.write_table(table, save_filepath)
+        dataset.to_parquet(save_path, engine='pyarrow')
 
 def get_timestamp() -> str:
     """
