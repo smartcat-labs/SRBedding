@@ -239,7 +239,7 @@ def get_threshold(distances: List[int], sentences: List[str]) -> int:
  
     return 90
 
-def split_chunk(big_chunk: str) -> List[str]:
+def split_chunk(big_chunk: str, smallest_size: int, largest_size: int) -> List[str]:
     """
     Splits a large chunk of text into smaller chunks based on token size.
 
@@ -263,10 +263,10 @@ def split_chunk(big_chunk: str) -> List[str]:
     current_sentence = ""
     for sentence in sentences:
         token_size = num_tokens_from_string(current_sentence, 'cl100k_base')
-        if 80 < token_size <450:
+        if smallest_size < token_size <largest_size:
             splits.append(current_sentence)
             current_sentence = ''
-        elif token_size>=450:
+        elif token_size>=largest_size:
             current_sentence = ""
         else:
             current_sentence += sentence
@@ -295,15 +295,17 @@ def get_filtered_chunks(chunks: List[str]) -> List[str]:
     >>> filtered_chunks = get_filtered_chunks(chunks)
     >>> print(filtered_chunks)
     """
+    smallest_size = 175
+    largest_size = 500
     filtered = []
     for chunk in chunks:
         token_num = num_tokens_from_string(chunk, 'cl100k_base')
-        if token_num < 80:
+        if token_num < smallest_size:
             continue
-        if token_num < 450:
+        if token_num < largest_size:
             filtered.append(chunk)
         else:
-            filtered.extend(split_chunk(chunk))
+            filtered.extend(split_chunk(chunk, smallest_size, largest_size))
     return filtered 
 
 def get_chunks(sentences: List[str], buffer_size: int) -> List[str]:
