@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import sys
 
+import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -47,7 +48,7 @@ def load_data_ms_marco(dataset_name="microsoft/ms_marco"):
     for i in range(100):
         final_data.append(
             {
-                "query_id": ms_marco["query_id"][i],
+                "query_id": str(ms_marco["query_id"][i]),
                 "query": ms_marco["query"][i],
                 "passage_text": ms_marco["passages"][i]["passage_text"],
             }
@@ -58,16 +59,16 @@ def load_data_ms_marco(dataset_name="microsoft/ms_marco"):
 def make_cache_dir():
     return Path("~/Datasets/SRBendding").expanduser()
 
-def save_failed_ids(failed_ids):
-    file_path = Path('translation_pipeline_test/failedids.txt')
+def save_failed_ids(failed, dataset_name):
+    file_path = Path(f'translation_pipeline_test/failed_{dataset_name}.json')
 
     # Write the IDs to a text file, one per line
-    with open(file_path, 'w') as file:
-        for id_ in failed_ids:
-            file.write(f"{id_}\n")
+    with open(file_path, "w") as f:
+        # Convert exceptions to string because exceptions are not JSON serializable
+        json.dump(failed, f, default=str, indent=4)
 
 
-def make_dataset(file_path: Path): #file_path is a path to chat gpt translation results
+def make_dataset(file_path: Path, dataset_name): #file_path is a path to chat gpt translation results
         returned_dict = {
              "id": [],
              "query": [],
@@ -77,30 +78,32 @@ def make_dataset(file_path: Path): #file_path is a path to chat gpt translation 
         # Open and iterate through the .jsonl file
         with open(file_path, 'r') as file:
             for line in file:
-                data = json.loads(line)
-                id_ = data[-1]['id']
-                returned_data = data[1]['choices'][0]['message']['content']
+                id_ = None
                 try:
+                    data = json.loads(line)
+                    id_ = data[-1]['id']
+                    returned_data = data[1]['choices'][0]['message']['content']
                     tranlation = json.loads(returned_data) # gpt message i.e. translation in this case
-                    print(type(tranlation['passage_text']))
-                    if isinstance(tranlation['passage_text'], int):
-                        print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
-                        print(id_)
-                    # tranlation = returned_data['translations']
                     returned_dict['id'].append(id_)
                     returned_dict['query'].append(tranlation['query'])
                     returned_dict['passage_text'].append(tranlation['passage_text'])
-                except json.JSONDecodeError as _:
-                    failed.append(id_)
+                except Exception as e:
+                    failed.append({
+                        'id': id_,
+                        'exception': e
+                    })
         if failed:
-            save_failed_ids(failed)
+            save_failed_ids(failed, dataset_name=dataset_name)
         return returned_dict
 
-def save_in_file(processed_commands_path, save_path):
-    data_for_df = make_dataset(processed_commands_path)
+def save_in_file(processed_commands_path, save_path: Path):
+    data_for_df = make_dataset(processed_commands_path, save_path.stem)
     save_path.parent.mkdir(parents=True, exist_ok=True)
 
     dataset = pd.DataFrame(data_for_df)
+    # dataset['id'] = dataset['id'].astype(str)
+    # dataset['query'] = dataset['query'].astype(str)
+    dataset['passage_text'] = dataset['passage_text'].apply(lambda x: np.array(x, dtype=str))
     dataset.to_parquet(save_path, engine='pyarrow')
 
 def load_data_natural(dataset_name:str = "google-research-datasets/natural_questions"):
@@ -109,7 +112,9 @@ def load_data_natural(dataset_name:str = "google-research-datasets/natural_quest
     validation_dataset = data['validation']
 
     result = []
-    for i in range(len(validation_dataset) - 7720):
+    i = 0
+    while len(result) < 100 or i >= len(validation_dataset):
+    # for i in range(len(validation_dataset) - 7720):
         record = validation_dataset[i]
         id = record['id']
         start_byte, end_byte = get_start_and_end_byte(record)
@@ -121,7 +126,8 @@ def load_data_natural(dataset_name:str = "google-research-datasets/natural_quest
             "passage_text": [context],
 
         }
-        if context != "":
+        i += 1
+        if context != "" and len(context)< 48875:
             result.append(current)
 
     return result

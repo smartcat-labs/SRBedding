@@ -118,7 +118,7 @@ def save_jobs(sentences: List[str], filename: Path, prompt_template: str, model:
             json_string = json.dumps(job, ensure_ascii=False)
             f.write(json_string + "\n")
 
-def make_dataset(processed_commands_path: Path, contexts: List[str], save_path: Path) -> None:
+def make_dataset(processed_commands_path: Path, contexts: List[str], save_path: Path, dataset_name: str) -> None:
         
         returned_dict = {
              "context": [],
@@ -128,23 +128,40 @@ def make_dataset(processed_commands_path: Path, contexts: List[str], save_path: 
              "keywords": [],
              "scores": []
         }
+        failed = []
         # Open and iterate through the .jsonl file
         with open(processed_commands_path, 'r', encoding='utf8') as file:
             for line in file:
-                data = json.loads(line)
-                context_id = data[-1]['context']
-                context = contexts[context_id]
-                returned_data = data[1]['choices'][0]['message']['content']
-                returned_data = json.loads(returned_data)
-                returned_dict['context'].append(context)
-                returned_dict['short_query'].append(returned_data['short_query'])
-                returned_dict['medium_query'].append(returned_data['medium_query'])
-                returned_dict['long_query'].append(returned_data['long_query'])
-                returned_dict['keywords'].append(returned_data['keywords'])
-                returned_dict['scores'].append(returned_data['scores'])
+                try:
+                    data = json.loads(line)
+                    context_id = data[-1]['context']
+                    context = contexts[context_id]
+                    returned_data = data[1]['choices'][0]['message']['content']
+                    returned_data = json.loads(returned_data)
+                    returned_dict['context'].append(context)
+                    returned_dict['short_query'].append(returned_data['short_query'])
+                    returned_dict['medium_query'].append(returned_data['medium_query'])
+                    returned_dict['long_query'].append(returned_data['long_query'])
+                    returned_dict['keywords'].append(returned_data['keywords'])
+                    returned_dict['scores'].append(returned_data['scores'])
+                except Exception as e:
+                    failed.append({
+                        'context': context,
+                        'exception': e
+                    })
+        if failed:
+            save_failed_ids(failed, dataset_name=dataset_name)
         
         dataset = pd.DataFrame(returned_dict)
         dataset.to_parquet(save_path, engine='pyarrow')
+
+def save_failed_ids(failed, dataset_name):
+    file_path = Path(f'datasets/failed_{dataset_name}.json')
+
+    # Write the IDs to a text file, one per line
+    with open(file_path, "w") as f:
+        # Convert exceptions to string because exceptions are not JSON serializable
+        json.dump(failed, f, default=str, indent=4)
 
 def get_timestamp() -> str:
     """
@@ -199,7 +216,7 @@ def generate_query(contexts: List[str], save_filepath: Path):
     
     save_jobs(contexts, command_path, PROMPT)
     run_api_request_processor(requests_filepath=command_path, save_filepath=processed_command_path, request_url="https://api.openai.com/v1/chat/completions")
-    make_dataset(processed_commands_path=processed_command_path, save_path=save_filepath, contexts=contexts)
+    make_dataset(processed_commands_path=processed_command_path, save_path=save_filepath, contexts=contexts, dataset_name= dataset_name)
 
 def environment_setup():
     """
