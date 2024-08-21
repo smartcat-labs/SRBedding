@@ -1,16 +1,11 @@
 import asyncio
 import json
 import os
-import sys
 from pathlib import Path
-from pprint import pprint
 
-import openai
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
-import sentence_transformers
-import transformers
 from api_request_parallel_processor import process_api_requests_from_file
 from datasets import load_dataset
 from openai import OpenAI
@@ -81,7 +76,7 @@ def save_jobs(filename, jobs):
             json_string = json.dumps(job, ensure_ascii=False)
             f.write(json_string + "\n")
 
-def load_data(
+def load_data_ms_marco(
     dataset_name="microsoft/ms_marco",
 ):  # Make it a config variable + type hint
     datasets_dir = make_cache_dir()
@@ -102,8 +97,8 @@ def load_data(
     return final_data
 
 def make_cache_dir():
+    #TODO fix
     datasets_dir = Path("~/Datasets/").expanduser()
-    #assert datasets_dir.exists(), "Datasets directory not found"
     datasets_dir = datasets_dir / "SRBedding_datasets/ms_marco_v1"
     datasets_dir.mkdir(parents=True, exist_ok=True)
     return datasets_dir
@@ -127,23 +122,76 @@ def make_dataset(file_path: Path): #file_path is a path to chat gpt translation 
                 returned_dict['passage_text'].append(tranlation['passage_text'])
         return returned_dict
 
-def save_in_file(path):
-    data_for_df = make_dataset(path)
+def save_in_file(processed_commands_path, save_path):
+    data_for_df = make_dataset(processed_commands_path)
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+
+    ## TODO PROMENI OVO
     dataset = pd.DataFrame(data_for_df)
     table = pa.Table.from_pandas(dataset)
-    print(dataset.head())
-    pq.write_table(table, 'datasets/train.parquet')
+    # print(dataset.head())
+    pq.write_table(table, save_path)
+
+def load_data_natural(dataset_name:str = "google-research-datasets/natural_questions"):
+    dir = make_cache_dir()
+    data = load_dataset(dataset_name, "dev", cache_dir=dir)  
+    validation_dataset = data['validation']
+
+    result = []
+    for i in range(len(validation_dataset) - 7820):
+        record = validation_dataset[i]
+        id = record['id']
+        start_byte, end_byte = get_start_and_end_byte(record)
+        context = make_context(record, start_byte, end_byte)
+        question = record['question']['text']
+        current = {
+            "query_id": id,
+            "query": question,
+            "passage_text": [context],
+
+        }
+        result.append(current)
+
+    return result
+
+def make_context(info, start_byte, end_byte):
+    context = ""    
+    token_element = info['document']['tokens']
+    for j in range(len(token_element['token'])):
+        if not token_element['is_html'][j] and start_byte <= token_element['start_byte'][j] <= end_byte:
+            context += (token_element['token'][j]).strip() + " "
+    context = context.strip()
+    return context
+
+def get_start_and_end_byte(info):
+    start_byte = -1
+    end_byte = -1
+    long_answers = info['annotations']['long_answer']
+    for j in range(len(long_answers)):
+        if long_answers[j]["start_byte"] != -1:
+            start_byte = long_answers[j]["start_byte"]
+            end_byte = long_answers[j]["end_byte"]
+            break
+    return start_byte,end_byte
 
 if __name__ == "__main__":
 
     client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
     model = "gpt-3.5-turbo-0125"
+    datasets = [
+        {'name': "msmarco",
+         'loading_function': load_data_ms_marco},
+        {'name': "naquestions",
+         'loading_function': load_data_natural}
+    ]
 
-    final_data = load_data()
-    path = "test.jsonl"
-    saved_filepath = "translation_pipeline_test/test_results.jsonl"
-
-    make_jobs(model=model, prompt=SYSTEM_PROMPT, filename=path, dataset=final_data)
-    run_api_request_processor(requests_filepath=path, save_filepath=saved_filepath, request_url="https://api.openai.com/v1/chat/completions")
-    save_in_file(saved_filepath)
+    for dataset in datasets:
+        final_data = dataset['loading_function']()
+        path = Path("translation_pipeline_test/test.jsonl")
+        commands_filepath = Path(f"translation_pipeline_test/{dataset['name']}_test_results.jsonl")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        make_jobs(model=model, prompt=SYSTEM_PROMPT, filename=path, dataset=final_data)
+        run_api_request_processor(requests_filepath=path, save_filepath=commands_filepath, request_url="https://api.openai.com/v1/chat/completions")
+        final_save_path = Path(f"datasets/{dataset['name']}.parquet")
+        save_in_file(commands_filepath, save_path=final_save_path)
 
