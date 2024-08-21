@@ -37,8 +37,8 @@ To translate, follow the steps below:
    3. Ensure consistent JSON formatting as illustrated in the example below:
 
       **EXAMPLE**
-      {'translations' : [{'query' : 'This is a query',
-                         'passage_text ' : ['This is one passage. With another sentence.',
+      {"translations" : [{"query" : 'This is a query',
+                         "passage_text" : ['This is one passage. With another sentence.',
                                           'This is yet another passage. With yet another sentence.']
                         }
                         ]

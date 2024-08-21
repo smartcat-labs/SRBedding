@@ -85,7 +85,7 @@ def load_data_ms_marco(
     ms_marco = data_test_split.select_columns(["passages", "query", "query_id"])
 
     final_data = []
-    for i in range(3):
+    for i in range(10):
         final_data.append(
             {
                 "query_id": ms_marco["query_id"][i],

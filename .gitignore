@@ -165,3 +165,7 @@ cython_debug/
 # Large files inside of project
 */datasets
 *.jsonl
+*/results
+*/output
+*/commands
+
