@@ -44,7 +44,7 @@ def load_data_ms_marco(dataset_name="microsoft/ms_marco"):
     ms_marco = data_test_split.select_columns(["passages", "query", "query_id"])
 
     final_data = []
-    for i in range(10):
+    for i in range(100):
         final_data.append(
             {
                 "query_id": ms_marco["query_id"][i],
@@ -82,6 +82,10 @@ def make_dataset(file_path: Path): #file_path is a path to chat gpt translation 
                 returned_data = data[1]['choices'][0]['message']['content']
                 try:
                     tranlation = json.loads(returned_data) # gpt message i.e. translation in this case
+                    print(type(tranlation['passage_text']))
+                    if isinstance(tranlation['passage_text'], int):
+                        print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+                        print(id_)
                     # tranlation = returned_data['translations']
                     returned_dict['id'].append(id_)
                     returned_dict['query'].append(tranlation['query'])
@@ -105,7 +109,7 @@ def load_data_natural(dataset_name:str = "google-research-datasets/natural_quest
     validation_dataset = data['validation']
 
     result = []
-    for i in range(len(validation_dataset) - 7820):
+    for i in range(len(validation_dataset) - 7720):
         record = validation_dataset[i]
         id = record['id']
         start_byte, end_byte = get_start_and_end_byte(record)
