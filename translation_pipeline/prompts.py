@@ -39,14 +39,10 @@ To translate, follow the steps below:
 
    **EXAMPLE**
 
-      {
-         "translations" : [
-                              {
-                                 "query" : "This is a query",
-                                 "passage_text" : ["This is one passage. With another sentence.", "This is yet another passage. With yet another sentence."]
-                              }
-                           ]
-      }
+         {
+            "query" : "This is a query",
+            "passage_text" : ["This is one passage. With another sentence.", "This is yet another passage. With yet another sentence."]
+         }
 
    **END OF EXAMPLE**
 
