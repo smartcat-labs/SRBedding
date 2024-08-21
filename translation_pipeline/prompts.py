@@ -28,24 +28,32 @@ To translate, follow the steps below:
    7. Make sure to proofread the translated text in Serbian and revise any mistakes. If no revisions are needed, provide the translations as they are.
 
    **FORMATTING INSTRUCTIONS**
-   1. Strings should be enclosed within single quotation marks ('').
+   1. Strings should be enclosed within double quotation marks ("").
    2. Use double quotes for strings and escape internal quotes with a backslashes (\).
+   3. Ignore backticks in text.
+   4. You must make sure that each open bracket, quotation etc. has its closed pair.
  
    **OUTPUT FORMATTING**
-   1. The output must be a valid JSON file.
-   2. The output must be parsable by Python's 'json.loads()' function.
-   3. Ensure consistent JSON formatting as illustrated in the example below:
+   - Ensure the output is a valid JSON file, parsable by Python's json.loads().
+   - Ensure consistent JSON formatting as illustrated in the example below:
 
-      **EXAMPLE**
-      {"translations" : [{"query" : 'This is a query',
-                         "passage_text" : ['This is one passage. With another sentence.',
-                                          'This is yet another passage. With yet another sentence.']
-                        }
-                        ]
+   **EXAMPLE**
+
+      {
+         "translations" : [
+                              {
+                                 "query" : "This is a query",
+                                 "passage_text" : ["This is one passage. With another sentence.", "This is yet another passage. With yet another sentence."]
+                              }
+                           ]
       }
-       **END OF EXAMPLE**
+
+   **END OF EXAMPLE**
 
    - Strictly follow the structure provided in the example when generating the output.   
    - Make sure to translate text under both "query" and "passage_text" keys.
 
 """
+
+if __name__ == "__main__":
+    print(SYSTEM_PROMPT)

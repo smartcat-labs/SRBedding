@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -103,23 +104,38 @@ def make_cache_dir():
     datasets_dir.mkdir(parents=True, exist_ok=True)
     return datasets_dir
 
+def save_failed_ids(failed_ids):
+    file_path = Path('translation_pipeline_test/failedids.txt')
+
+    # Write the IDs to a text file, one per line
+    with open(file_path, 'w') as file:
+        for id_ in failed_ids:
+            file.write(f"{id_}\n")
+
+
 def make_dataset(file_path: Path): #file_path is a path to chat gpt translation results
         returned_dict = {
              "id": [],
              "query": [],
              "passage_text": [],
         }
+        failed = []
         # Open and iterate through the .jsonl file
         with open(file_path, 'r') as file:
             for line in file:
                 data = json.loads(line)
                 id_ = data[-1]['id']
                 returned_data = data[1]['choices'][0]['message']['content']
-                returned_data = json.loads(returned_data) # gpt message i.e. translation in this case
-                tranlation = returned_data['translations'][0]
-                returned_dict['id'].append(id_)
-                returned_dict['query'].append(tranlation['query'])
-                returned_dict['passage_text'].append(tranlation['passage_text'])
+                try:
+                    returned_data = json.loads(returned_data) # gpt message i.e. translation in this case
+                    tranlation = returned_data['translations'][0]
+                    returned_dict['id'].append(id_)
+                    returned_dict['query'].append(tranlation['query'])
+                    returned_dict['passage_text'].append(tranlation['passage_text'])
+                except json.JSONDecodeError as e:
+                    failed.append(id_)
+        if failed:
+            save_failed_ids(failed)
         return returned_dict
 
 def save_in_file(processed_commands_path, save_path):
@@ -150,7 +166,8 @@ def load_data_natural(dataset_name:str = "google-research-datasets/natural_quest
             "passage_text": [context],
 
         }
-        result.append(current)
+        if context != "":
+            result.append(current)
 
     return result
 
