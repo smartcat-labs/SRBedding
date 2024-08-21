@@ -32,9 +32,6 @@ yellowbrick = "^1.5"
 promptml = "^0.6.1"
 accelerate = "0.30.0"
 conllu = "^5.0.1"
-langchain = "^0.2.13"
-langchain-openai = "^0.1.21"
-langchain-community = "^0.2.12"
 itables = "^2.1.4"
 
 
