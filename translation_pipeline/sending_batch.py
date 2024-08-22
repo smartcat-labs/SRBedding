@@ -34,7 +34,7 @@ def make_jobs(
                 # This is what you would have in your Chat Completions API call
                 "model": model,
                 # "response_format": {"type": "json_object"},
-                # "temperature": 0,
+                "temperature": 0,
                 # "metadata": {"id": sample["query_id"]},
                 "messages": [
                     {"role": "system", "content": prompt},
@@ -218,7 +218,7 @@ def batch_requests(jobs_file: Path, dataset_name: str):
     file_path = f"commands/number_{dataset_name}.txt"
 
     # Open the file in write mode and write the number
-    with open(file_path, "w") as file:
+    with open(file_path, "w", encoding="utf-8") as file:
         file.write(batch_job.id)
 
 

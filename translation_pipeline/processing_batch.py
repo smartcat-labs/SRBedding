@@ -12,8 +12,6 @@ from openai import OpenAI
 from prompts import SYSTEM_PROMPT
 
 sys.path.append("..")
-from api_request_parallel_processor import run_api_request_processor
-
 
 
 def save_failed_ids(failed: List[Dict[str, str]], dataset_name: str) -> None:
@@ -31,6 +29,7 @@ def make_dataset(
         "id": [],
         "query": [],
         "passage_text": [],
+        "explanation" : []
     }
     failed = []
     # Open and iterate through the .jsonl file
@@ -47,6 +46,7 @@ def make_dataset(
                 returned_dict["id"].append(id_)
                 returned_dict["query"].append(tranlation["query"])
                 returned_dict["passage_text"].append(tranlation["passage_text"])
+                returned_dict["explanation"].append(tranlation["explanation"])
             except Exception as e:
                 failed.append({"id": id_, "exception": e})
     if failed:
@@ -88,7 +88,7 @@ if __name__=="__main__":
         print(batch_job.status)
         if batch_job.status != 'completed':
             continue
-        # print(batch_job)
+        print(batch_job)
         result_file_name = f"commands/results_{dataset_name}.jsonl"
         result_file_id = batch_job.output_file_id
         result = client.files.content(result_file_id).content
