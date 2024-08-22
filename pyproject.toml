@@ -33,6 +33,7 @@ promptml = "^0.6.1"
 accelerate = "0.30.0"
 conllu = "^5.0.1"
 itables = "^2.1.4"
+fastparquet = "^2024.5.0"
 
 
 
