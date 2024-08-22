@@ -43,7 +43,7 @@ def make_dataset(
                 tranlation = json.loads(
                     returned_data
                 )  # gpt message i.e. translation in this case
-                returned_dict["id"].append(id_)
+                returned_dict["id"].append(id_) # ovde se append ids i koji su u failed i onda je problem kad se pravi df u line 61
                 returned_dict["query"].append(tranlation["query"])
                 returned_dict["passage_text"].append(tranlation["passage_text"])
                 returned_dict["explanation"].append(tranlation["explanation"])
@@ -51,6 +51,8 @@ def make_dataset(
                 failed.append({"id": id_, "exception": e})
     if failed:
         save_failed_ids(failed, dataset_name=dataset_name)
+    
+   # "" print(returned_dict)
     return returned_dict
 
 
