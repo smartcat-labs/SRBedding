@@ -2,17 +2,11 @@ from datetime import datetime
 import json
 import os
 from pathlib import Path
-import sys
 from typing import Any, Dict, List, Tuple
 
-import numpy as np
-import pandas as pd
 from datasets import load_dataset
 from openai import OpenAI
 from prompts import SYSTEM_PROMPT
-
-sys.path.append("..")
-from api_request_parallel_processor import run_api_request_processor
 
 
 def make_jobs(
@@ -33,14 +27,20 @@ def make_jobs(
     """
     jobs = [
         {
-            "model": model,
-            "response_format": {"type": "json_object"},
-            "temperature": 0,
-            "metadata": {"id": sample["query_id"]},
-            "messages": [
-                {"role": "system", "content": prompt},
-                {"role": "user", "content": json.dumps(sample)},
-            ],
+            "custom_id": f'task-{sample["query_id"]}',
+            "method": "POST",
+            "url": "/v1/chat/completions",
+            "body": {
+                # This is what you would have in your Chat Completions API call
+                "model": model,
+                # "response_format": {"type": "json_object"},
+                # "temperature": 0,
+                # "metadata": {"id": sample["query_id"]},
+                "messages": [
+                    {"role": "system", "content": prompt},
+                    {"role": "user", "content": json.dumps(sample)},
+                ],
+            },
         }
         for sample in dataset
     ]
@@ -82,7 +82,7 @@ def load_data_ms_marco(
     ms_marco = data_test_split.select_columns(["passages", "query", "query_id"])
 
     final_data = []
-    for i in range(100):
+    for i in range(10):
         final_data.append(
             {
                 "query_id": str(ms_marco["query_id"][i]),
@@ -104,57 +104,6 @@ def make_cache_dir() -> Path:
     return Path("~/Datasets/SRBendding").expanduser()
 
 
-def save_failed_ids(failed: List[Dict[str, str]], dataset_name: str) -> None:
-    file_path = Path(f"failed/failed_{dataset_name}.json")
-    file_path.parent.mkdir(parents=True, exist_ok=True)
-    # Write the IDs to a text file, one per line
-    with open(file_path, "w") as f:
-        # Convert exceptions to string because exceptions are not JSON serializable
-        json.dump(failed, f, default=str, indent=4)
-
-
-def make_dataset(
-    processed_commands_path: Path, dataset_name: str
-) -> Dict[str, str | List[str]]:
-    returned_dict = {
-        "id": [],
-        "query": [],
-        "passage_text": [],
-    }
-    failed = []
-    # Open and iterate through the .jsonl file
-    with open(processed_commands_path, "r") as file:
-        for line in file:
-            id_ = None
-            try:
-                data = json.loads(line)
-                id_ = data[-1]["id"]
-                returned_data = data[1]["choices"][0]["message"]["content"]
-                tranlation = json.loads(
-                    returned_data
-                )  # gpt message i.e. translation in this case
-                returned_dict["id"].append(id_)
-                returned_dict["query"].append(tranlation["query"])
-                returned_dict["passage_text"].append(tranlation["passage_text"])
-            except Exception as e:
-                failed.append({"id": id_, "exception": e})
-    if failed:
-        save_failed_ids(failed, dataset_name=dataset_name)
-    return returned_dict
-
-
-def save_in_file(processed_commands_path: Path, save_path: Path) -> None:
-    data_for_df = make_dataset(processed_commands_path, save_path.stem)
-    save_path.parent.mkdir(parents=True, exist_ok=True)
-
-    dataset = pd.DataFrame(data_for_df)
-    # dataset['id'] = dataset['id'].astype(str)
-    # dataset['query'] = dataset['query'].astype(str)
-    dataset["passage_text"] = dataset["passage_text"].apply(
-        lambda x: np.array(x, dtype=str)
-    )
-    dataset.to_parquet(save_path, engine="pyarrow")
-
 
 def load_data_natural(
     dataset_name: str = "google-research-datasets/natural_questions",
@@ -174,7 +123,7 @@ def load_data_natural(
 
     result = []
     i = 0
-    while len(result) < 100 and i < len(validation_dataset):
+    while len(result) < 10 and i < len(validation_dataset):
         record = validation_dataset[i]
         id = record["id"]
         start_byte, end_byte = get_start_and_end_byte(record)
@@ -257,6 +206,23 @@ def get_timestamp() -> str:
     return now.strftime("%d-%m-%Y_%H-%M-%S")
 
 
+def batch_requests(jobs_file: Path, dataset_name: str):
+    batch_file = client.files.create(file=open(jobs_file, "rb"), purpose="batch")
+
+    batch_job = client.batches.create(
+        input_file_id=batch_file.id,
+        endpoint="/v1/chat/completions",
+        completion_window="24h",
+    )
+    print(batch_job.id)
+    file_path = f"commands/number_{dataset_name}.txt"
+
+    # Open the file in write mode and write the number
+    with open(file_path, "w") as file:
+        file.write(batch_job.id)
+
+
+
 if __name__ == "__main__":
     client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
     model = "gpt-3.5-turbo-0125"
@@ -271,14 +237,9 @@ if __name__ == "__main__":
 
         final_data = dataset["loading_function"]()
         path = Path(f"commands/jobs_{dataset_name}.jsonl")
-        commands_filepath = Path(f"commands/results_{dataset_name}_{date}.jsonl")
         path.parent.mkdir(parents=True, exist_ok=True)
 
         make_jobs(model=model, prompt=SYSTEM_PROMPT, filename=path, dataset=final_data)
-        run_api_request_processor(
-            requests_filepath=path,
-            save_filepath=commands_filepath,
-            request_url="https://api.openai.com/v1/chat/completions",
-        )
-        final_save_path = Path(f"datasets/{dataset_name}.parquet")
-        save_in_file(commands_filepath, save_path=final_save_path)
+
+        batch_requests(jobs_file=path, dataset_name=dataset_name)
+
