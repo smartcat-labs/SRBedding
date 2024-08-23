@@ -23,11 +23,12 @@ To translate, follow the steps below:
    2. When you understand the English sentence, start to translate.
    3. Pay close attention to both left and right context when you translate.
    4. Convey the original context, tone and meaning in the Serbian translation.
-   4. Avoid literal translations and ensure the output reads naturally in Serbian.
-   5. The translation must be contextually accurate, fluent, and adhere to the grammatical rules and lexicon of the Serbian language.
-   6. The declination of nouns, adjectives, and pronouns must be correct.
-   7. Make sure to proofread the translated text in Serbian and revise any mistakes. If no revisions are needed, provide the translations as they are.
-   8. Provide a brief explanation in the English lanauge of your reasoning while translating (1-3 short sentences) for each query-context translation.
+   5. Avoid literal translations and ensure the output reads naturally in Serbian.
+   6. The translation must be contextually accurate, fluent, and adhere to the grammatical rules and lexicon of the Serbian language.
+   7. The declination of nouns, adjectives, and pronouns must be correct.
+   8. Make sure to translate terminology from English to its correct Serbian equivalent where possible.
+   9. Make sure to proofread the translated text in Serbian and revise any mistakes. If no revisions are needed, provide the translations as they are.
+      
 
    **FORMATTING INSTRUCTIONS**
    1. Strings should be enclosed within double quotation marks ("").
@@ -43,15 +44,15 @@ To translate, follow the steps below:
          {
             "query" : "This is a query",
             "passage_text" : ["This is one passage. With another sentence.", "This is yet another passage. With yet another sentence."]
-            "explanation" : "This is my explanation of the reasoning behind the provided tanslation."
          }
 
    **END OF EXAMPLE**
 
    - Strictly follow the structure provided in the example when generating the output.   
-   - You must translate EACH query and EACH passage_text that you recieve.
+   - Make sure to translate text under both "query" and "passage_text" keys.
 
 """
+
 
 if __name__ == "__main__":
     print(SYSTEM_PROMPT)

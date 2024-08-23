@@ -65,6 +65,7 @@ def save_jobs(filename: Path, jobs: List[Dict[str, Any]]) -> None:
 
 
 def load_data_ms_marco(
+    loading_size,
     dataset_name: str = "microsoft/ms_marco",
 ) -> List[Dict[str, Any]]:
     """
@@ -82,7 +83,7 @@ def load_data_ms_marco(
     ms_marco = data_test_split.select_columns(["passages", "query", "query_id"])
 
     final_data = []
-    for i in range(100):
+    for i in range(loading_size):
         final_data.append(
             {
                 "query_id": str(ms_marco["query_id"][i]),
@@ -157,6 +158,7 @@ def save_in_file(processed_commands_path: Path, save_path: Path) -> None:
 
 
 def load_data_natural(
+    loading_size: int,
     dataset_name: str = "google-research-datasets/natural_questions",
 ) -> List[Dict[str, str | List[str]]]:
     """
@@ -174,7 +176,7 @@ def load_data_natural(
 
     result = []
     i = 0
-    while len(result) < 100 and i < len(validation_dataset):
+    while len(result) < loading_size and i < len(validation_dataset):
         record = validation_dataset[i]
         id = record["id"]
         start_byte, end_byte = get_start_and_end_byte(record)
@@ -261,15 +263,15 @@ if __name__ == "__main__":
     client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
     model = "gpt-3.5-turbo-0125"
     datasets = [
-        {"name": "msmarco", "loading_function": load_data_ms_marco},
-        {"name": "naquestions", "loading_function": load_data_natural},
+        {"name": "msmarco", "loading_function": load_data_ms_marco, "data_size": 10},
+        {"name": "naquestions", "loading_function": load_data_natural, "data_size": 10},
     ]
 
     for dataset in datasets:
         date = get_timestamp()
         dataset_name = dataset["name"]
 
-        final_data = dataset["loading_function"]()
+        final_data = dataset["loading_function"](dataset["data_size"])
         path = Path(f"commands/jobs_{dataset_name}.jsonl")
         commands_filepath = Path(f"commands/results_{dataset_name}_{date}.jsonl")
         path.parent.mkdir(parents=True, exist_ok=True)

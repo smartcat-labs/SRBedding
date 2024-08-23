@@ -1,15 +1,13 @@
-from datetime import datetime
 import json
 import os
-from pathlib import Path
 import sys
-from typing import Any, Dict, List, Tuple
+from pathlib import Path
+from typing import Dict, List
 
 import numpy as np
 import pandas as pd
-from datasets import load_dataset
 from openai import OpenAI
-from prompts import SYSTEM_PROMPT
+from pprint import pprint
 
 sys.path.append("..")
 
@@ -22,15 +20,11 @@ def save_failed_ids(failed: List[Dict[str, str]], dataset_name: str) -> None:
         # Convert exceptions to string because exceptions are not JSON serializable
         json.dump(failed, f, default=str, indent=4)
 
+
 def make_dataset(
     processed_commands_path: Path, dataset_name: str
 ) -> Dict[str, str | List[str]]:
-    returned_dict = {
-        "id": [],
-        "query": [],
-        "passage_text": [],
-        "explanation" : []
-    }
+    returned_dict = {"id": [], "query": [], "passage_text": []}
     failed = []
     # Open and iterate through the .jsonl file
     with open(processed_commands_path, "r") as file:
@@ -39,27 +33,29 @@ def make_dataset(
             try:
                 data = json.loads(line)
                 id_ = data["custom_id"].replace("task-", "")
-                returned_data = data['response']['body']['choices'][0]['message']['content']
-                tranlation = json.loads(
-                    returned_data
-                )  # gpt message i.e. translation in this case
-                returned_dict["id"].append(id_) # ovde se append ids i koji su u failed i onda je problem kad se pravi df u line 61
-                returned_dict["query"].append(tranlation["query"])
-                returned_dict["passage_text"].append(tranlation["passage_text"])
-                returned_dict["explanation"].append(tranlation["explanation"])
+                returned_data = data["response"]["body"]["choices"][0]["message"][
+                    "content"
+                ]
+                tranlation = json.loads(returned_data)
+                query = tranlation["query"]
+                passages = tranlation["passage_text"]
+
+                returned_dict["query"].append(query)
+                returned_dict["passage_text"].append(passages)
+                # returned_dict["explanation"].append(tranlation["explanation"])
+                returned_dict["id"].append(id_)
             except Exception as e:
                 failed.append({"id": id_, "exception": e})
     if failed:
         save_failed_ids(failed, dataset_name=dataset_name)
-    
-   # "" print(returned_dict)
+
+    # pprint(returned_dict)
     return returned_dict
 
 
 def save_in_file(processed_commands_path: Path, save_path: Path) -> None:
     data_for_df = make_dataset(processed_commands_path, save_path.stem)
     save_path.parent.mkdir(parents=True, exist_ok=True)
-
     dataset = pd.DataFrame(data_for_df)
     # dataset['id'] = dataset['id'].astype(str)
     # dataset['query'] = dataset['query'].astype(str)
@@ -75,11 +71,11 @@ def get_batch_id(file: Path) -> str:
     return text.strip()
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
     datasets = [
         {"name": "msmarco", "loading_function": None},
-        {"name": "naquestions", "loading_function": None},
+        # {"name": "naquestions", "loading_function": None},
     ]
     for dataset in datasets:
         dataset_name = dataset["name"]
@@ -88,16 +84,14 @@ if __name__=="__main__":
 
         batch_job = client.batches.retrieve(batch_id)
         print(batch_job.status)
-        if batch_job.status != 'completed':
+        if batch_job.status != "completed":
             continue
         print(batch_job)
         result_file_name = f"commands/results_{dataset_name}.jsonl"
         result_file_id = batch_job.output_file_id
         result = client.files.content(result_file_id).content
-        with open(result_file_name, 'wb') as file:
+        with open(result_file_name, "wb") as file:
             file.write(result)
 
         final_save_path = Path(f"datasets/{dataset_name}.parquet")
         save_in_file(result_file_name, save_path=final_save_path)
-
-
