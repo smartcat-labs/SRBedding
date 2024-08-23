@@ -75,7 +75,7 @@ if __name__ == "__main__":
     client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
     datasets = [
         {"name": "msmarco", "loading_function": None},
-        # {"name": "naquestions", "loading_function": None},
+        {"name": "naquestions", "loading_function": None},
     ]
     for dataset in datasets:
         dataset_name = dataset["name"]

@@ -1129,6 +1129,22 @@ pandas = ">=1.5.0"
 lzo = ["python-lzo"]
 
 [[package]]
+name = "fasttext"
+version = "0.9.3"
+description = "fasttext Python bindings"
+optional = false
+python-versions = "*"
+files = [
+    {file = "fasttext-0.9.3-cp39-cp39-macosx_14_0_arm64.whl", hash = "sha256:8b39f3ac5df43873648ea400cb75d4f7f9455730ac5105490b23b70f14e03ea7"},
+    {file = "fasttext-0.9.3.tar.gz", hash = "sha256:eb03f2ef6340c6ac9e4398a30026f05471da99381b307aafe2f56e4cd26baaef"},
+]
+
+[package.dependencies]
+numpy = "*"
+pybind11 = ">=2.2"
+setuptools = ">=0.7.0"
+
+[[package]]
 name = "filelock"
 version = "3.15.4"
 description = "A platform independent file lock."
@@ -3372,6 +3388,20 @@ numpy = ">=1.16.6"
 test = ["cffi", "hypothesis", "pandas", "pytest", "pytz"]
 
 [[package]]
+name = "pybind11"
+version = "2.13.5"
+description = "Seamless operability between C++11 and Python"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "pybind11-2.13.5-py3-none-any.whl", hash = "sha256:dc35a98b61a0d23ee8599b317664f5be7e259fdc369a3b810b1ebbc3f5674d27"},
+    {file = "pybind11-2.13.5.tar.gz", hash = "sha256:ae33f635322f9d9741abde0c5f348bf9373f6c22298883395e586cb43c55574e"},
+]
+
+[package.extras]
+global = ["pybind11-global (==2.13.5)"]
+
+[[package]]
 name = "pycparser"
 version = "2.22"
 description = "C parser in Python"
@@ -5424,4 +5454,4 @@ scipy = ">=1.0.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "2f7facfa13b680ba7f8073f32a4b2c67bec9674992570b8eae54fd4d8c604b85"
+content-hash = "26137c7c77fc10f3aaf223216bd84bb3bfc2aa4ca671b3a1c107abb8c7a32312"

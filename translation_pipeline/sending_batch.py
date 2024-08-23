@@ -81,7 +81,7 @@ def load_data_ms_marco(
     ms_marco = data_test_split.select_columns(["passages", "query", "query_id"])
 
     final_data = []
-    for i in range(data_size):
+    for i in range(1000, data_size):
         final_data.append(
             {
                 "query_id": str(ms_marco["query_id"][i]),
@@ -225,8 +225,8 @@ if __name__ == "__main__":
     client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
     model = "gpt-3.5-turbo-0125"
     datasets = [
-        {"name": "msmarco", "loading_function": load_data_ms_marco, "data_size": 1000},
-        # {"name": "naquestions", "loading_function": load_data_natural, "data_size": 1000},
+        {"name": "msmarco", "loading_function": load_data_ms_marco, "data_size": 4000},
+        {"name": "naquestions", "loading_function": load_data_natural, "data_size": 4000},
     ]
 
     for dataset in datasets:
