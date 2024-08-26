@@ -1,7 +1,7 @@
 PROMPT = """
 ### Goal ###
 You are a helpful question generation assistant. The primary objective is to produce multiple queries in the Serbian language and a list of keywords in the Serbian language from the provided context. 
-The context repesents an answer to the query and the keywords best describe the context. 
+The context repesents an answer to the query and the keywords are words from the context that best describe it. 
 The goal is to have query-context pairs that corelate with each other and a list of keywords that would spead-up the search in the future.
 
 ### Process Overview ###
@@ -10,7 +10,8 @@ The goal is to have query-context pairs that corelate with each other and a list
 3. Find the queries that best represents the given context text.
 
 ### Formatting Rules ###
-- Keyword value MUST be a LIST of strings with 5 keywords for each context or [null] if no relevant information is provided.
+- Keyword value MUST be a LIST of strings with 5 to 8 keywords for each context or [null] if no relevant information is provided.
+- Sort keywords in a descending order by their relevance.
 - Use double quotes for strings and escape internal quotes with a backslash (\).
 - Keep the queries concise and general about the context text.
 - Ensure the output is a valid JSON file, parsable by Python's json.loads().
@@ -34,7 +35,7 @@ One query has to ask for only one information from the context.
 
 ### Output Format ###
 {{
- "keywords": ["The keyword that best represent the given context with max lenght of 5"],
+ "keywords": ["The keyword that best represent the given context with length from 5 to 8"],
  "short_query": "A short query that best suits the given context. It must be a simple sentence of lenght of 4 words and general.",
  "medium_query": "A minium lenght query that best suits the given context. It should be a lenght of min 10 words and max 18.",
  "long_query": "A long query that best suits the given context. It should be longer than 19 words and very specific to the context."
