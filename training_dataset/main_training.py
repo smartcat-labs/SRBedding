@@ -5,7 +5,7 @@ from typing import List
 from chunking_pipeline import get_chunks
 from datasets_loading import get_datasets
 # from query_creation_pipeline import generate_query
-from sending_query_batch import generate_query
+from batch_query_creation import generate_query
 
 
 def make_subset_from_all_sentences(all_sentences: List[str], final_lenght: int, chunked_lenght:int, random_step: int, random_step_start: int = 2000) -> List[str]:
@@ -45,8 +45,10 @@ if __name__== "__main__":
         all_sentences =dataset_args['loading_function']()
         print(dataset_name)
         filthered_sentences = make_subset_from_all_sentences(all_sentences=all_sentences,
-                                                        final_lenght = dataset_args['final_lenght'],
-                                                        chunked_lenght = dataset_args['chunked_lenght'],
+                                                        final_lenght = 30,
+                                                        chunked_lenght = 10,
+                                                        # final_lenght = dataset_args['final_lenght'],
+                                                        # chunked_lenght = dataset_args['chunked_lenght'],
                                                         random_step = dataset_args['random_step'],
                                                         random_step_start = dataset_args['random_step_start'],
                                                         )

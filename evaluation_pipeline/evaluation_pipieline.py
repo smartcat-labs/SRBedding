@@ -177,7 +177,7 @@ def save_contexts_query_jobs(
         None
     """
     queries, contexts, _ = get_data_for_evaluation(dataset_name)
-    document_name = dataset_name.split("/")[1]
+    document_name = dataset_name.stem
     name = document_name.split("_")[0]
     query_path = "datasets/queries"
     context_path = "datasets/contexts"
@@ -201,20 +201,27 @@ if __name__ == "__main__":
     load_dotenv()
     openai.api_key = os.getenv("OPENAI_API_KEY")
 
-    save_contexts_query_jobs("datasets/squad_processed.parquet")
 
-    datasets = [Path("datasets/squad_processed.parquet")]
+    datasets = ["squad",
+                "marco",
+                "naquestions"]
 
     models_ = {
-        "google-bert/bert-base-multilingual-cased": False,
-        "datasets/text-embedding-3-small-squad": True,
+        # "google-bert/bert-base-multilingual-cased": False,
+        "datasets/text-embedding-3-small": True,
     }
 
     for dataset_name in datasets:
         for model_name in models_.keys():
+            dataset_path = Path(f"datasets/{dataset_name}_processed.parquet")
+            name = model_name
+            if models_[model_name]:
+                save_contexts_query_jobs(dataset_path, model_name=model_name.split('/')[1])
+                model_name += "-" + dataset_name
+                
             res = evaluate(
                 model_name=model_name,
-                dataset_name=dataset_name,
-                is_openAI=models_[model_name],
+                dataset_name=dataset_path,
+                is_openAI=models_[name],
             )
             pprint(res)
