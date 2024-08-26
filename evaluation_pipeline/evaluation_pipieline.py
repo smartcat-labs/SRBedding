@@ -78,7 +78,7 @@ def get_data_for_evaluation(dataset_name: Path) -> tuple:
     relevant_docs = {}
     query_idx = 1
     for idx, row in df.iterrows():
-        if idx >= 10:  # Break the loop after two iterations
+        if idx >= 30:  # Break the loop after two iterations
             break
         contexts[idx] = row["context"]
         for query in row["queries"]:
@@ -196,15 +196,11 @@ def save_contexts_query_jobs(
 
 
 if __name__ == "__main__":
-
     # set the environment
     load_dotenv()
     openai.api_key = os.getenv("OPENAI_API_KEY")
 
-
-    datasets = ["squad",
-                "marco",
-                "naquestions"]
+    datasets = ["squad", "marco", "naquestions"]
 
     models_ = {
         # "google-bert/bert-base-multilingual-cased": False,
@@ -216,9 +212,11 @@ if __name__ == "__main__":
             dataset_path = Path(f"datasets/{dataset_name}_processed.parquet")
             name = model_name
             if models_[model_name]:
-                save_contexts_query_jobs(dataset_path, model_name=model_name.split('/')[1])
+                save_contexts_query_jobs(
+                    dataset_path, model_name=model_name.split("/")[1]
+                )
                 model_name += "-" + dataset_name
-                
+
             res = evaluate(
                 model_name=model_name,
                 dataset_name=dataset_path,

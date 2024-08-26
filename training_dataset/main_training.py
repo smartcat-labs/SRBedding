@@ -34,7 +34,11 @@ def make_subset_from_all_sentences(all_sentences: List[str], final_lenght: int, 
     start = 0
     final_sentences = []
     while start+chunked_lenght < len(all_sentences) and len(final_sentences) < final_lenght:
-        final_sentences.extend(all_sentences[start:start+chunked_lenght])
+        sentences = [
+            sentence for sentence in all_sentences[start:start+chunked_lenght]
+            if len(sentence) < 100_000
+        ]
+        final_sentences.extend(sentences)
         start += chunked_lenght + random.randint(random_step_start, random_step)
     return final_sentences
 
