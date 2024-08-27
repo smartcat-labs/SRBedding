@@ -77,11 +77,14 @@ def get_data_for_evaluation(dataset_name: Path) -> tuple:
     queries = {}
     relevant_docs = {}
     query_idx = 1
+    embedded = 0
     for idx, row in df.iterrows():
-        if idx >= 30:  # Break the loop after two iterations
+        if embedded >= 8000:
             break
         contexts[idx] = row["context"]
+        embedded += 1
         for query in row["queries"]:
+            embedded += 1
             query = query.strip()
             queries[query_idx] = query
             if query_idx not in relevant_docs:
@@ -200,21 +203,27 @@ if __name__ == "__main__":
     load_dotenv()
     openai.api_key = os.getenv("OPENAI_API_KEY")
 
-    datasets = ["squad", "marco", "naquestions"]
+    datasets = [
+        "squad", 
+        # "marco", 
+        "naquestions"
+        ]
 
     models_ = {
-        # "google-bert/bert-base-multilingual-cased": False,
-        "datasets/text-embedding-3-small": True,
-    }
+        # "google-bert/bert-base-multilingual-cased": False, ## mtb rettrivsl na modelCard koje dt je imao u sebi
+        # "mixedbread-ai/mxbai-embed-large-v1": False  ## v2??? medium, small
+        "datasets/text-embedding-3-small": True, ### open AI, sve u fajluuuuuuuuu
+    }   # 
 
     for dataset_name in datasets:
         for model_name in models_.keys():
             dataset_path = Path(f"datasets/{dataset_name}_processed.parquet")
             name = model_name
+
             if models_[model_name]:
-                save_contexts_query_jobs(
-                    dataset_path, model_name=model_name.split("/")[1]
-                )
+                # save_contexts_query_jobs(
+                #     dataset_path, model_name=model_name.split("/")[1]
+                # )
                 model_name += "-" + dataset_name
 
             res = evaluate(
