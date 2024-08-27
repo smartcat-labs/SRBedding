@@ -110,13 +110,14 @@ def load_sentence_tranformer_from_transformer(model_name: str) -> SentenceTransf
         SentenceTransformer: A SentenceTransformer model that is a combination of the specified transformer
                              model and a pooling layer.
     """
-    model = AutoModel.from_pretrained(model_name)
-    # Combine the model and pooling into a SentenceTransformer
-    word_embedding_model = models.Transformer(model_name_or_path=model_name)
-    pooling_model = models.Pooling(
-        word_embedding_dimension=model.config.hidden_size, pooling_mode_mean_tokens=True
-    )
-    return SentenceTransformer(modules=[word_embedding_model, pooling_model])
+    # model = AutoModel.from_pretrained(model_name)
+    # # Combine the model and pooling into a SentenceTransformer
+    # word_embedding_model = models.Transformer(model_name_or_path=model_name)
+    # pooling_model = models.Pooling(
+    #     word_embedding_dimension=model.config.hidden_size, pooling_mode_mean_tokens=True
+    # )
+    # return SentenceTransformer(modules=[word_embedding_model, pooling_model])
+    return SentenceTransformer("mixedbread-ai/mxbai-embed-large-v1")
 
 
 def evaluate(model_name: str, dataset_name: Path, is_openAI: bool) -> Dict[str, float]:
