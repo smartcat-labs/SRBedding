@@ -1,25 +1,28 @@
-import random
-import pyarrow.parquet as pq
-import pandas
-from pathlib import Path
-from typing import List, Dict, Tuple
-from sentence_transformers import SentenceTransformer,  models, util
-from sentence_transformers.readers import InputExample
-from enum import Enum
-from torch.utils.data import DataLoader, random_split
-from datetime import datetime
-import math
-import sentence_transformers.losses  as losses
-from sentence_transformers import SentenceTransformerTrainingArguments
-from sentence_transformers.evaluation import EmbeddingSimilarityEvaluator, SimilarityFunction
-from sentence_transformers import SentenceTransformerTrainer
-from sklearn.model_selection import train_test_split
-from datasets import Dataset
-import tqdm
-from sentence_transformers.cross_encoder import CrossEncoder  
-from sentence_transformers.cross_encoder.evaluation import CECorrelationEvaluator
-import torch
 import logging
+import math
+import random
+from datetime import datetime
+from enum import Enum
+from pathlib import Path
+from typing import List, Tuple
+
+import pandas
+import pyarrow.parquet as pq
+import sentence_transformers.losses as losses
+import torch
+import tqdm
+from datasets import Dataset
+from sentence_transformers import (SentenceTransformer,
+                                   SentenceTransformerTrainer,
+                                   SentenceTransformerTrainingArguments,
+                                   models, util)
+from sentence_transformers.cross_encoder import CrossEncoder
+from sentence_transformers.cross_encoder.evaluation import \
+    CECorrelationEvaluator
+from sentence_transformers.evaluation import (EmbeddingSimilarityEvaluator,
+                                              SimilarityFunction)
+from sentence_transformers.readers import InputExample
+from torch.utils.data import DataLoader
 
 # Set up basic configuration for logging
 logging.basicConfig(level=logging.INFO)
@@ -87,8 +90,8 @@ def make_sentence_transformer(model_name: str, max_seq_length: int = 512) -> Sen
                                 pooling_mode_mean_tokens=True)
     return SentenceTransformer(modules=[word_embedding_model, pooling_model])
 
-def train_a_model(model_name:str, args: SentenceTransformerTrainingArguments, train_dataset, eval_dataset):
-    sentence_transformer = make_sentence_transformer(model_name)
+def train_a_model(sentence_transformer:SentenceTransformer, args: SentenceTransformerTrainingArguments, train_dataset, eval_dataset):
+    # sentence_transformer = make_sentence_transformer(model_name)
     train_loss = losses.CosineSimilarityLoss(model=sentence_transformer)
     train_loss = losses.MatryoshkaLoss(sentence_transformer, train_loss, [768, 512, 256, 128, 64])
 
@@ -126,8 +129,9 @@ def make_evaluator(dataset, sentence_transformer):
         name="sts-dev",
         write_csv=True
     )
-
-    dev_evaluator(model=sentence_transformer)
+    result_path = Path('results/')
+    result_path.mkdir(exist_ok=True)
+    dev_evaluator(model=sentence_transformer, output_path='results/')
     return dev_evaluator
 
 
@@ -169,7 +173,7 @@ def load_model(model_save_path: str) -> SentenceTransformer:
 def main_pipeline(num_epochs: int, batch_size: int, model_name: str, dataset_name: Path):
     train_dataset, dev_dataset, eval_dataset, eval_with_text = get_train_and_eval_datasets(dataset_name)
     model_save_path = Path('output/trained_'+model_name.replace("/", "-")+'-'+datetime.now().strftime("%d-%m-%Y_%H-%M-%S"))
-
+    model_save_path.parent.mkdir(exist_ok=True, parents=True)
     train_bi_encoder(num_epochs, batch_size, model_name, train_dataset, eval_dataset, model_save_path)
 
     cross_encoder_path = 'output/cross-encoder/stsb_indomain_'+model_name.replace("/", "-")+'-'+datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
@@ -185,17 +189,14 @@ def main_pipeline(num_epochs: int, batch_size: int, model_name: str, dataset_nam
 
     train_dataloader = make_combined_data(batch_size, gold_samples, silver_data, silver_scores)
 
-    train_loss = losses.CosineSimilarityLoss(model=semantic_search_model)
-    train_loss = losses.MatryoshkaLoss(model=semantic_search_model, loss=train_loss, matryoshka_dims=[768, 512, 256, 128, 64])
-    
-    evaluator = make_evaluator(dataset=dev_dataset, sentence_transformer=semantic_search_model)
-
     # Configure the training.
     warmup_steps = math.ceil(len(train_dataloader) * num_epochs * 0.1) #10% of train data for warm-up
 
+    final_model_save_path = model_save_path.with_name(model_save_path.name + "_final")
+
     args = SentenceTransformerTrainingArguments(
             # Required parameter:
-            output_dir=model_save_path,
+            output_dir=final_model_save_path,
             # Optional training parameters:
             num_train_epochs=num_epochs,
             per_device_train_batch_size=batch_size,
@@ -214,17 +215,12 @@ def main_pipeline(num_epochs: int, batch_size: int, model_name: str, dataset_nam
             logging_steps=100,
             run_name="proba",  # Will be used in W&B if `wandb` is installed
             warmup_steps=warmup_steps,
+            load_best_model_at_end=True,  # Automatically load the best model at the end of training
+            metric_for_best_model="cosine_loss",  # Assuming you're using loss as the evaluation metric
+            greater_is_better=False,
         )
     
-    trainer = SentenceTransformerTrainer(
-            model=semantic_search_model,
-            args=args,
-            train_dataset=train_dataset,
-            eval_dataset=eval_dataset,
-            loss=train_loss,
-            evaluator=evaluator,
-        )
-    trainer.train()
+    train_a_model(sentence_transformer=semantic_search_model, args=args, eval_dataset=eval_dataset, train_dataset=train_dataset)
 
 def make_combined_data(batch_size, gold_samples, silver_data, silver_scores):
     silver_samples = list(InputExample(texts=[data[0], data[1]], label=score) for \
@@ -299,8 +295,11 @@ def train_bi_encoder(num_epochs, batch_size, model_name, train_dataset, eval_dat
             logging_steps=100,
             run_name="proba",  # Will be used in W&B if `wandb` is installed
             warmup_steps=warmup_steps,
+            load_best_model_at_end=True,  # Automatically load the best model at the end of training
+            metric_for_best_model="cosine_loss",  # Assuming you're using loss as the evaluation metric
+            greater_is_better=False,
         )
-    train_a_model(model_name, args=args, eval_dataset=eval_dataset, train_dataset=train_dataset)
+    train_a_model(sentence_transformer=make_sentence_transformer(model_name), args=args, eval_dataset=eval_dataset, train_dataset=train_dataset)
 
 
 if __name__ == "__main__":
