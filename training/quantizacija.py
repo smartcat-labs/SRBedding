@@ -19,8 +19,10 @@ from sentence_transformers import (
 )
 from sentence_transformers.evaluation import InformationRetrievalEvaluator
 from sentence_transformers.readers import InputExample
-from transformers import AutoTokenizer, TrainerCallback, TrainerControl, TrainerState
+from transformers import AutoTokenizer, TrainerCallback, TrainerControl, TrainerState, BitsAndBytesConfig, AutoModelForMaskedLM, AutoModel
 from pprint import pprint
+import torch
+from quanto import quantize, freeze
 
 # Set up basic configuration for logging
 logging.basicConfig(level=logging.INFO)
@@ -106,14 +108,42 @@ def make_sentence_transformer(
     #     "return_tensors": "pt",  # Assuming you want PyTorch tensors as output
     # }
     # return model
+    # Load model directly
+    # quantization_config = BitsAndBytesConfig(load_in_8bit = True)
+
+    # word_embedding_model = AutoModelForMaskedLM.from_pretrained(model_name, quantization_config=quantization_config)
+    
+    # # Apply mean pooling to get one fixed sized sentence vector
+    # pooling_model = models.Pooling(word_embedding_model.get_word_embedding_dimension(),
+    #                             pooling_mode_cls_token=False,
+    #                             pooling_mode_max_tokens=False,
+    #                             pooling_mode_mean_tokens=True)
+    
+    # tokenizer = AutoTokenizer.from_pretrained(model_name)
+    # tokenizer.model_max_length = max_seq_length  # Set the max length for the model
+    # tokenizer.padding_side = (
+    #     "right"  # You can set "left" if you want to pad on the left side
+    # )
+    # # tokenizer.pad_token = tokenizer.eos_token  # Ensure the pad token is set
+    # model = SentenceTransformer(modules=[word_embedding_model, pooling_model])
+    # # Add the padding and truncation to the encode method
+    # model.tokenizer = tokenizer
+    # model.tokenizer_kwargs = {
+    #     "padding": "max_length",
+    #     "truncation": True,
+    #     "max_length": max_seq_length,
+    #     "return_tensors": "pt",  # Assuming you want PyTorch tensors as output
+    # }
+    # return model
     word_embedding_model = models.Transformer(model_name, max_seq_length=max_seq_length)
     # Apply mean pooling to get one fixed sized sentence vector
     pooling_model = models.Pooling(word_embedding_model.get_word_embedding_dimension(),
                                 pooling_mode_cls_token=False,
                                 pooling_mode_max_tokens=False,
                                 pooling_mode_mean_tokens=True)
-    return SentenceTransformer(modules=[word_embedding_model, pooling_model])
-
+    model = SentenceTransformer(modules=[word_embedding_model, pooling_model])
+    quantize(model, weights=torch.int8, activations=None)
+    return model
 
 class EvalLoggingCallback(TrainerCallback):
     def __init__(self, save_path: str):
@@ -279,5 +309,5 @@ def train_bi_encoder(
 
 if __name__ == "__main__":
     main_pipeline(
-        10, 16, "mixedbread-ai/mxbai-embed-large-v1", Path("datasets/TRAIN11k.parquet")
+        10, 16, "jerteh/Jerteh-355", Path("datasets/train.parquet")
     )

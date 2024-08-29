@@ -35,6 +35,8 @@ conllu = "^5.0.1"
 itables = "^2.1.4"
 fastparquet = "^2024.5.0"
 fasttext = "^0.9.3"
+tensorboard = "^2.17.1"
+quanto = "^0.2.0"
 
 
 
