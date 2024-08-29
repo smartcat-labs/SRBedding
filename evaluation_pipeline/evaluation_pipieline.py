@@ -117,7 +117,7 @@ def load_sentence_tranformer_from_transformer(model_name: str) -> SentenceTransf
     #     word_embedding_dimension=model.config.hidden_size, pooling_mode_mean_tokens=True
     # )
     # return SentenceTransformer(modules=[word_embedding_model, pooling_model])
-    return SentenceTransformer("mixedbread-ai/mxbai-embed-large-v1")
+    return SentenceTransformer(model_name)
 
 
 def evaluate(model_name: str, dataset_name: Path, is_openAI: bool) -> Dict[str, float]:
@@ -206,14 +206,15 @@ if __name__ == "__main__":
 
     datasets = [
         "squad", 
-        # "marco", 
+        "marco", 
         "naquestions"
         ]
 
     models_ = {
+        "output/final_model": False,
         # "google-bert/bert-base-multilingual-cased": False, ## mtb rettrivsl na modelCard koje dt je imao u sebi
         # "mixedbread-ai/mxbai-embed-large-v1": False  ## v2??? medium, small
-        "datasets/text-embedding-3-small": True, ### open AI, sve u fajluuuuuuuuu
+        # "datasets/text-embedding-3-small": True, ### open AI, sve u fajluuuuuuuuu
     }   # 
 
     for dataset_name in datasets:
