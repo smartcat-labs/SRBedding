@@ -19,19 +19,8 @@ from sentence_transformers import (
 )
 from sentence_transformers.evaluation import InformationRetrievalEvaluator
 from sentence_transformers.readers import InputExample
-from transformers import (
-    AutoTokenizer,
-    TrainerCallback,
-    TrainerControl,
-    TrainerState,
-    BitsAndBytesConfig,
-    AutoModelForMaskedLM,
-    AutoModel,
-    QuantoConfig,
-)
+from transformers import AutoTokenizer, TrainerCallback, TrainerControl, TrainerState
 from pprint import pprint
-import torch
-from quanto import quantize, freeze, qint8, qfloat8
 
 # Set up basic configuration for logging
 logging.basicConfig(level=logging.INFO)
@@ -54,10 +43,11 @@ def convert_dataset(
     dataset_samples = []
     for _, row in dataframe.iterrows():
         # score = float(row["scores"][question_type]) / 5.0
-        sample = InputExample(
-            texts=[row[question_type], row["context"]]
-        )  ## anchor and positive
-        dataset_samples.append(sample)
+        for question_type in ("short_query", "medium_query", "long_query"):
+            sample = InputExample(
+                texts=[row[question_type], row["context"]]
+            )  ## anchor and positive
+            dataset_samples.append(sample)
     return dataset_samples
 
 
@@ -74,7 +64,6 @@ def convert_to_hf_dataset(input_examples: List[InputExample]) -> Dataset:
 
 def get_train_and_eval_datasets(
     dataset_name: Path,
-    tokenizer: AutoTokenizer
 ) -> Tuple[Dataset, Dataset, Dataset, List]:
     # NOTE francuzi su 70:15:15 ovde je 80:10:10
     df = load_df(file=dataset_name)
@@ -96,12 +85,6 @@ def get_train_and_eval_datasets(
     dev_dataset = convert_to_hf_dataset(dev_samples)
     eval_dataset = convert_to_hf_dataset(eval_samples)
 
-
-    # DODATO
-    # train_dataset = tokenize_dataset(dataset=train_dataset, tokenizer=tokenizer)
-    # dev_dataset = tokenize_dataset(dataset=dev_dataset, tokenizer=tokenizer)
-    # eval_dataset = tokenize_dataset(dataset=eval_dataset, tokenizer=tokenizer)
-   
     return train_dataset, dev_dataset, eval_dataset, eval_samples
 
 
@@ -124,59 +107,13 @@ def make_sentence_transformer(
     #     "return_tensors": "pt",  # Assuming you want PyTorch tensors as output
     # }
     # return model
-
-
-    # Load model directly
-    # quantization_config = BitsAndBytesConfig(load_in_8bit = True)
-    # quantization_config = QuantoConfig(weights="int8")
-
-    # word_embedding_model = AutoModel.from_pretrained(model_name, quantization_config=quantization_config)
-
-    # # Apply mean pooling to get one fixed sized sentence vector
-    # pooling_model = models.Pooling(max_seq_length,
-    #                             pooling_mode_cls_token=False,
-    #                             pooling_mode_max_tokens=False,
-    #                             pooling_mode_mean_tokens=True)
-
-    # tokenizer = AutoTokenizer.from_pretrained(model_name)
-    # tokenizer.model_max_length = max_seq_length  # Set the max length for the model
-    # tokenizer.padding_side = (
-    #     "right"  # You can set "left" if you want to pad on the left side
-    # )
-    # # tokenizer.pad_token = tokenizer.eos_token  # Ensure the pad token is set
-    # model = SentenceTransformer(modules=[word_embedding_model, pooling_model])
-    # # Add the padding and truncation to the encode method
-    # model.tokenizer = tokenizer
-    # model.tokenizer_kwargs = {
-    #     "padding": "max_length",
-    #     "truncation": True,
-    #     "max_length": max_seq_length,
-    #     "return_tensors": "pt",  # Assuming you want PyTorch tensors as output
-    # }
-    # return model
-
     word_embedding_model = models.Transformer(model_name, max_seq_length=max_seq_length)
     # Apply mean pooling to get one fixed sized sentence vector
-    pooling_model = models.Pooling(
-        word_embedding_model.get_word_embedding_dimension(),
-        pooling_mode_cls_token=False,
-        pooling_mode_max_tokens=False,
-        pooling_mode_mean_tokens=True,
-    )
-
-    model = SentenceTransformer(modules=[word_embedding_model, pooling_model])
-    # quantize(model, weights=qfloat8, activations=qfloat8)
-    # freeze(model)
-    return model.half()
-
-def tokenize_dataset(dataset, tokenizer, max_seq_len= 521):
-
-    def tokenize(batch):
-        batch = tokenizer(batch["anchor"], padding=True, truncation=True, max_length=max_seq_len)
-        pprint(batch)
-        return tokenizer(batch["positive"], padding=True, truncation=True, max_length=max_seq_len)
-
-    return dataset.map(tokenize, batched=True, batch_size=len(dataset))
+    pooling_model = models.Pooling(word_embedding_model.get_word_embedding_dimension(),
+                                pooling_mode_cls_token=False,
+                                pooling_mode_max_tokens=False,
+                                pooling_mode_mean_tokens=True)
+    return SentenceTransformer(modules=[word_embedding_model, pooling_model])
 
 
 class EvalLoggingCallback(TrainerCallback):
@@ -258,12 +195,28 @@ def train_a_model(
 
 
 def getDictionariesForEval(dataset):
+    queries = {}
+    corpus = {}
     relevant_docs = {}
-    queries = {str(index): value for index, value in enumerate(dataset["anchor"])}
-    corpus = {str(index): value for index, value in enumerate(dataset["positive"])}
-    relevant_docs = {
-        str(index): [str(index)] for index, _ in enumerate(dataset["positive"])
-    }
+
+    # Create a mapping from positive examples to a list of their corresponding anchor indices
+    corpus_map = {}
+    for index, positive in enumerate(dataset["positive"]):
+        if positive not in corpus_map:
+            corpus_map[positive] = index
+            corpus[str(index)] = positive
+
+    # Build the queries, corpus, and relevant_docs based on the mapping
+    for index, (anchor, positive) in enumerate(zip(dataset["anchor"], dataset["positive"])):
+        query_id = str(index)
+        queries[query_id] = anchor
+        # Assign all anchors related to the same positive to the relevant_docs
+        relevant_docs[query_id] = corpus_map[positive]
+
+    pprint(queries)
+    pprint(corpus)
+    pprint(relevant_docs)
+
     return queries, corpus, relevant_docs
 
 
@@ -289,22 +242,20 @@ def make_dirs(model_save_path):
 def main_pipeline(
     num_epochs: int, batch_size: int, model_name: str, dataset_name: Path
 ):
-    sentenc = make_sentence_transformer(model_name)
     train_dataset, dev_dataset, eval_dataset, _ = get_train_and_eval_datasets(
-        dataset_name=dataset_name,
-        tokenizer = sentenc.tokenizer
+        dataset_name
     )
     model_save_path = Path(
         f'output/bi_encoder_{datetime.now().strftime("%d-%m-%Y_%H-%M-%S")}'
     )
     make_dirs(model_save_path)
     train_bi_encoder(
-        num_epochs, batch_size, sentenc, train_dataset, eval_dataset, model_save_path
+        num_epochs, batch_size, model_name, train_dataset, eval_dataset, model_save_path
     )
 
 
 def train_bi_encoder(
-    num_epochs, batch_size, model, train_dataset, eval_dataset, model_save_path
+    num_epochs, batch_size, model_name, train_dataset, eval_dataset, model_save_path
 ):
     warmup_steps = math.ceil(len(train_dataset) * num_epochs * 0.1)
 
@@ -319,7 +270,6 @@ def train_bi_encoder(
         warmup_ratio=0.1,
         fp16=True,  # Set to False if you get an error that your GPU can't run on FP16
         bf16=False,  # Set to True if you have a GPU that supports BF16
-        fp16_full_eval=True,
         # batch_sampler=BatchSamplers.NO_DUPLICATES,  # losses that use "in-batch negatives" benefit from no duplicates
         # Optional tracking/debugging parameters:
         eval_strategy="steps",
@@ -337,7 +287,7 @@ def train_bi_encoder(
         # KeyError: "The `metric_for_best_model` training argument is set to 'eval_cosine_loss', which is not found in the evaluation metrics. The available evaluation metrics are: ['eval_loss', 'eval_sts-dev_pearson_cosine', 'eval_sts-dev_spearman_cosine', 'eval_sts-dev_pearson_manhattan', 'eval_sts-dev_spearman_manhattan', 'eval_sts-dev_pearson_euclidean', 'eval_sts-dev_spearman_euclidean', 'eval_sts-dev_pearson_dot', 'eval_sts-dev_spearman_dot', 'eval_sts-dev_pearson_max', 'eval_sts-dev_spearman_max', 'eval_runtime', 'eval_samples_per_second', 'eval_steps_per_second', 'epoch']. Consider changing the `metric_for_best_model` via the TrainingArguments."
     )
     train_a_model(
-        sentence_transformer=model,
+        sentence_transformer=make_sentence_transformer(model_name),
         args=args,
         eval_dataset=eval_dataset,
         train_dataset=train_dataset,
@@ -345,4 +295,6 @@ def train_bi_encoder(
 
 
 if __name__ == "__main__":
-    main_pipeline(2, 16, "jerteh/Jerteh-81", Path("datasets/train.parquet"))
+    main_pipeline(
+        10, 16, "mixedbread-ai/mxbai-embed-large-v1", Path("datasets/TRAIN11k.parquet")
+    )
