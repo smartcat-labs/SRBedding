@@ -74,7 +74,7 @@ def get_train_and_eval_datasets(
 ) -> Tuple[Dataset, Dataset, Dataset, List]:
     # NOTE francuzi su 70:15:15 ovde je 80:10:10
     df = load_df(file=dataset_name)
-    training_samples = convert_dataset(df, QueryType.SHORT.value)
+    training_samples = convert_dataset(df, 'query')
 
     random.shuffle(training_samples)
 
@@ -170,7 +170,7 @@ def train_a_model(
     train_dataset,
     eval_dataset,
 ):
-    train_loss = losses.MultipleNegativesRankingLoss(model=sentence_transformer)
+    train_loss = losses.ContrastiveLoss(model=sentence_transformer)
     # train_loss = losses.MatryoshkaLoss(
     #     sentence_transformer, train_loss, [768, 512, 256, 128, 64]
     # )
