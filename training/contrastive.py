@@ -51,8 +51,8 @@ def convert_dataset(
             sample = InputExample(
             texts=[row[question_type], negative],
             label=0
-        )  ## anchor and positive
-        dataset_samples.append(sample)
+            )  ## anchor and negative
+            dataset_samples.append(sample)
 
     return dataset_samples
 
@@ -221,10 +221,10 @@ def getDictionariesForEval(dataset):
         if dataset['label'][index] == 1:
             relevant_docs[query_id] = [corpus_map[positive]]
 
-    pprint(dataset['label'])
-    pprint(queries)
-    pprint(corpus)
-    pprint(relevant_docs)
+    # pprint(dataset['label'])
+    # pprint(queries)
+    # pprint(corpus)
+    # pprint(relevant_docs)
 
     return queries, corpus, relevant_docs
 
@@ -305,5 +305,5 @@ def train_bi_encoder(
 
 if __name__ == "__main__":
     main_pipeline(
-        10, 16, "mixedbread-ai/mxbai-embed-large-v1", Path("datasets/df_neg.parquet")
+        10, 16, "mixedbread-ai/mxbai-embed-large-v1", Path("datasets/long_query_neg.parquet")
     )

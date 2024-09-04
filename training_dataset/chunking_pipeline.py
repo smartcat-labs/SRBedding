@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 import sys
 from typing import Dict, List
@@ -99,8 +100,9 @@ def _make_embedding_dict(file_path):
 
 def save_combined_embeddings_jobs(sentences: List[Dict[str,str]], model_name: str = "text-embedding-3-small") -> None:
 
-    sentence_path = Path("datasets/cobined_sentences.jsonl")
-    saved_path = Path("datasets/combined_sentences_embeddings.jsonl")
+    date = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+    sentence_path = Path(f"commands/cobined_sentences_{date}.jsonl")
+    saved_path = Path(f"commands/combined_sentences_embeddings_{date}.jsonl")
     saved_path.parent.mkdir(parents=True, exist_ok=True)
     save_jobs(sentences, sentence_path)
     run_api_request_processor(sentence_path, saved_path, "https://api.openai.com/v1/embeddings")
