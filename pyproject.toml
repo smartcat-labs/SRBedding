@@ -1,0 +1,47 @@
+[tool.poetry]
+name = "srbedding"
+version = "0.1.0"
+description = ""
+authors = ["SelenaMilutin <selena.milutin@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+scipy = "^1.14.0"
+numpy = ">=1,<2"
+pandas = "^2.2.2"
+scikit-learn = "^1.5.1"
+matplotlib = "^3.9.1.post1"
+transformers = "^4.44.0"
+torch = "^2.4.0"
+pytorch-transformers = "^1.2.0"
+sentence-transformers = "^3.0.1"
+seaborn = "^0.13.2"
+datasets = "^2.20.0"
+jupyter = "^1.0.0"
+debugpy = "^1.8.5"
+lxml = "^5.2.2"
+evaluate = "^0.4.2"
+pytrec-eval = "^0.5"
+pyarrow = "^17.0.0"
+aiohttp = "^3.10.2"
+tiktoken = "^0.7.0"
+python-dotenv = "^1.0.1"
+openai = "^1.40.3"
+yellowbrick = "^1.5"
+promptml = "^0.6.1"
+accelerate = "0.30.0"
+conllu = "^5.0.1"
+itables = "^2.1.4"
+fastparquet = "^2024.5.0"
+fasttext = "^0.9.3"
+faiss-cpu = "^1.8.0.post1"
+beir = "^2.0.0"
+nomic = "^3.1.2"
+tensorboard = "^2.17.1"
+quanto = "^0.2.0"
+srbai = {git = "https://github.com/Serbian-AI-Society/SrbAI.git"}
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
