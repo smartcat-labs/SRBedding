@@ -1,4 +1,4 @@
-PROMPT = """
+PROMPT_OLD = """
 ### Goal ###
 You are a helpful question generation assistant. The primary objective is to produce multiple queries in the Serbian language and a list of keywords in the Serbian language from the provided context. 
 The context repesents an answer to the query and the keywords are words from the context that best describe it. 
@@ -52,7 +52,38 @@ One query has to ask for only one information from the context.
 """
 
 
-
+PROMPT = """
+You are a helpful assistant for automatic automatic query generation.
+You'll read a paragraph, and then issue queries in the Serbian language to a search engine in order to fact-check it. Also explain the queries.
+Finally, return the a list containing start index and end index of the answer is in the text. If the answer does not exist return (-1, -1)
+### Instructions ###
+- Generate queries based only on the provided context, not the prior knowledge.
+- Make sure that the queries are relevant to the context.
+- Answers to the generated queries must have semantic meaning and be derived directly from the provided context.
+### Score Description ###
+### Output format ###
+- Output the data in a JSON format parsable by json.loads() in Python.
+{{
+ "keywords": ["Context keywords"],
+ "short_query": "Limit your response to 2 to 4 words.",
+ "medium_query": "Limit your response to 5 to 7 words.",
+ "long_query": "Limit your response to 6 to 10 words.",
+ "reasoning": "An explanation of the reasoning behind the generated questions and answers for the given context."
+ "indexes": {{
+    "short_query": [start index of the answer in the context, end index of the answer in the context for the short query],
+    "medium_query": [start index of the answer in the context, end index of the answer in the context for the medium query],
+    "long_query": [start index of the answer in the context, end index of the answer in the context for the long query]
+ }}
+}}
+### Context ###
+{context}
+### Summary ###
+To revise, you should: read the provided context, reason about its meaning,
+issue queries in the Serbian language to a search engine in order to fact-check it, explain the queries,
+assign a score to each query, and generate a parsable JSON output.
+All the generated queries must adhire to the length limits predefined in the Output format.
+Let's think step by step while doing the task.
+"""
 
 # - 1 = A human could not find the answer from the context.
 # - 2 = A human would have diffictuly deriving the answer from the context.

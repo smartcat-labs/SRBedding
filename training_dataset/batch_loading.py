@@ -21,7 +21,7 @@ def make_dataset(
         "medium_query": [],
         "long_query": [],
         "keywords": [],
-        "scores": [],
+        "indexes": [],
     }
     failed = []
     # Open and iterate through the .jsonl file
@@ -39,20 +39,20 @@ def make_dataset(
                 medium_query = returned_data["medium_query"]
                 long_query = returned_data["long_query"]
                 keywords = returned_data["keywords"]
-                scores = returned_data["scores"]
+                scores = returned_data["indexes"]
 
                 # Add the data to the returned_dict
                 returned_dict["short_query"].append(short_query)
                 returned_dict["medium_query"].append(medium_query)
                 returned_dict["long_query"].append(long_query)
                 returned_dict["keywords"].append(keywords)
-                returned_dict["scores"].append(scores)
+                returned_dict["indexes"].append(scores)
                 returned_dict["context"].append(context)
             except Exception as e:
                 failed.append({"context": context, "exception": e})
     if failed:
         save_failed_ids(failed, dataset_name=dataset_name)
-
+    print(returned_dict["indexes"])
     dataset = pd.DataFrame(returned_dict)
     dataset.to_parquet(save_path, engine="pyarrow")
 

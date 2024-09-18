@@ -86,7 +86,7 @@ def combine_sentences(sentences: List[Dict[str,str]], buffer_size: int) -> List[
 
 def _make_embedding_dict(file_path):
         returned_dict = {}
-        with open(file_path, 'r') as file:
+        with open(file_path, 'r', encoding='UTF-8') as file:
             for line in file:
                 try:
                     data = json.loads(line)
@@ -395,7 +395,7 @@ if __name__== "__main__":
     # set environment
     openai.api_key = os.getenv("OPENAI_API_KEY")
     
-    with open('chunking_example/chunking_test_example.json', 'r') as file:
+    with open('chunking_example/chunking_test_example.json', 'r', encoding='UTF-8') as file:
         contexts = json.load(file) 
     sentences = contexts['contexts']
     chunks = get_chunks(sentences=sentences, buffer_size=1)
