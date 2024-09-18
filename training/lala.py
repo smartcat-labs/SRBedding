@@ -6,7 +6,8 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import List, Tuple
-
+from torch.optim import AdamW
+from torch.optim.lr_scheduler import LambdaLR
 import pandas
 import pyarrow.parquet as pq
 import sentence_transformers.losses as losses
@@ -44,7 +45,7 @@ def convert_dataset(
     for _, row in dataframe.iterrows():
         # score = float(row["scores"][question_type]) / 5.0
         sample = InputExample(
-            texts=[row[question_type], row["context"]]
+            texts=[row[question_type].replace("?", ""), row["context"]]
         )  ## anchor and positive
         dataset_samples.append(sample)
     return dataset_samples
@@ -66,8 +67,7 @@ def get_train_and_eval_datasets(
 ) -> Tuple[Dataset, Dataset, Dataset, List]:
     # NOTE francuzi su 70:15:15 ovde je 80:10:10
     df = load_df(file=dataset_name)
-    training_samples = convert_dataset(df, QueryType.LONG.value)
-
+    training_samples = convert_dataset(df, QueryType.SHORT.value)
     random.shuffle(training_samples)
 
     # Manually split the dataset while retaining the original structure
@@ -84,6 +84,9 @@ def get_train_and_eval_datasets(
     dev_dataset = convert_to_hf_dataset(dev_samples)
     eval_dataset = convert_to_hf_dataset(eval_samples)
 
+    print(len(train_dataset))
+    print(len(dev_dataset))
+    print(len(eval_dataset))
     return train_dataset, dev_dataset, eval_dataset, eval_samples
 
 
@@ -106,15 +109,39 @@ def make_sentence_transformer(
     #     "return_tensors": "pt",  # Assuming you want PyTorch tensors as output
     # }
     # return model
-    word_embedding_model = models.Transformer(model_name, max_seq_length=max_seq_length)
-    # Apply mean pooling to get one fixed sized sentence vector
-    pooling_model = models.Pooling(word_embedding_model.get_word_embedding_dimension(),
-                                pooling_mode_cls_token=False,
-                                pooling_mode_max_tokens=False,
-                                pooling_mode_mean_tokens=True)
+
+    # word_embedding_model = models.Transformer(model_name, max_seq_length=max_seq_length)
+    # # Apply mean pooling to get one fixed sized sentence vector
+    # pooling_model = models.Pooling(word_embedding_model.get_word_embedding_dimension(),
+    #                             pooling_mode_cls_token=False,
+    #                             pooling_mode_max_tokens=False,
+    #                             pooling_mode_mean_tokens=True)
+    # return SentenceTransformer(modules=[word_embedding_model, pooling_model])
+
     m = SentenceTransformer(model_name)
     m.max_seq_length = max_seq_length
-    return SentenceTransformer(modules=[word_embedding_model, pooling_model])
+    return m
+
+
+def get_scheduler_with_warmup_hold_decay(
+    optimizer, num_warmup_steps, num_training_steps, hold_steps
+):
+    # Define custom LR schedule function
+    def lr_lambda(current_step):
+        if current_step < num_warmup_steps:
+            return float(current_step) / float(
+                max(1, num_warmup_steps)
+            )  # Linear warmup
+        elif current_step < num_warmup_steps + hold_steps:
+            return 1.0  # Hold learning rate constant
+        else:
+            return max(
+                0.0,
+                float(num_training_steps - current_step)
+                / float(num_training_steps - num_warmup_steps - hold_steps),
+            )  # Linear decay
+
+    return LambdaLR(optimizer, lr_lambda=lr_lambda)
 
 
 class EvalLoggingCallback(TrainerCallback):
@@ -172,6 +199,24 @@ def train_a_model(
     # # 6. (Optional) Create an evaluator & evaluate the base model
     dev_evaluator = make_evaluator(eval_dataset, sentence_transformer, bi_encoder_path)
 
+    optimizer = AdamW(
+        sentence_transformer.parameters(),
+        lr=args.learning_rate,
+        weight_decay=args.weight_decay,
+    )
+
+    # Calculate total steps
+    total_steps = len(train_dataset) * args.num_train_epochs
+    warmup_steps = int(args.warmup_ratio * total_steps)
+    hold_steps = int(
+        0.4 * total_steps
+    )  # Hold LR for 40% of total steps (adjust as needed)
+
+    # Use the custom LR scheduler with warmup, hold, and decay
+    lr_scheduler = get_scheduler_with_warmup_hold_decay(
+        optimizer, warmup_steps, total_steps, hold_steps
+    )
+
     # 7. Create a trainer & train
     trainer = SentenceTransformerTrainer(
         model=sentence_transformer,
@@ -181,7 +226,9 @@ def train_a_model(
         loss=train_loss,
         evaluator=dev_evaluator,
         callbacks=[EvalLoggingCallback(save_path=bi_encoder_path)],
+        optimizers=(optimizer, lr_scheduler),
     )
+
     trainer.train()
 
     # # (Optional) Evaluate the trained model on the test set
@@ -242,7 +289,7 @@ def main_pipeline(
 def train_bi_encoder(
     num_epochs, batch_size, model_name, train_dataset, eval_dataset, model_save_path
 ):
-    warmup_steps = math.ceil(len(train_dataset) * num_epochs * 0.1)
+    # warmup_steps = math.ceil(len(train_dataset) * num_epochs * 0.1)
 
     args = SentenceTransformerTrainingArguments(
         # Required parameter:
@@ -251,8 +298,12 @@ def train_bi_encoder(
         num_train_epochs=num_epochs,
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
+        gradient_accumulation_steps=2,
         learning_rate=2e-5,
-        warmup_ratio=0.1,
+        # lr_scheduler_type="constant_with_warmup",
+        # lr_scheduler_kwargs={'last_epoch': 4},
+        weight_decay=0.01,
+        warmup_ratio=0.2,
         fp16=True,  # Set to False if you get an error that your GPU can't run on FP16
         bf16=False,  # Set to True if you have a GPU that supports BF16
         # batch_sampler=BatchSamplers.NO_DUPLICATES,  # losses that use "in-batch negatives" benefit from no duplicates
@@ -264,7 +315,7 @@ def train_bi_encoder(
         save_total_limit=2,
         logging_steps=100,
         run_name="proba",  # Will be used in W&B if `wandb` is installed
-        warmup_steps=warmup_steps,
+        # warmup_steps=warmup_steps,
         load_best_model_at_end=True,  # Automatically load the best model at the end of training
         metric_for_best_model="eval_loss",  # Assuming you're using loss as the evaluation metric
         greater_is_better=False,
@@ -281,5 +332,5 @@ def train_bi_encoder(
 
 if __name__ == "__main__":
     main_pipeline(
-        10, 16, "mixedbread-ai/mxbai-embed-large-v1", Path("datasets/TRAIN11k.parquet")
+        10, 16, "BAAI/bge-base-en-v1.5", Path("datasets/TRAIN11k_fixed.parquet")
     )

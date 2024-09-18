@@ -348,24 +348,6 @@ def get_filtered_chunks(chunks: List[str]) -> List[str]:
             filtered.extend(split_chunk(chunk, smallest_size, largest_size))
     return filtered 
 
-def helper_helper():
-    count  = 0
-    senteces = []
-    with open('datasets/cobined_sentences2.jsonl', 'r') as file:
-        for line in file:
-            try:
-                sentence_dict = {}
-                data = json.loads(line)
-                indx = int(data['metadata']['id'])
-                sentec = data['input']
-                sentence_dict['id'] = indx
-                sentence_dict['sentence'] = sentec
-                senteces.append(sentence_dict)
-                # embedding = data[1]['data'][0]['embedding']
-                # print(len(embedding))
-            except Exception as e:
-                count += 1
-    return senteces
 
 def get_chunks(sentences: List[str], buffer_size: int) -> List[str]:
     """
@@ -400,7 +382,6 @@ def get_chunks(sentences: List[str], buffer_size: int) -> List[str]:
     >>> print(chunks)
     """
     sentences_dic = return_dic(sentences)
-    # sentences_dic= helper_helper()
     sentences_comb = combine_sentences(sentences_dic, buffer_size)
     sentences_embed = generate_embeddings(sentences_comb)
     distances, sentences = calculate_cosine_distances(sentences_embed)

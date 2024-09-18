@@ -49,8 +49,8 @@ if __name__== "__main__":
         all_sentences =dataset_args['loading_function']()
         print(dataset_name)
         filthered_sentences = make_subset_from_all_sentences(all_sentences=all_sentences,
-                                                        final_lenght = 200,
-                                                        chunked_lenght = 30,
+                                                        final_lenght = 52_000,
+                                                        chunked_lenght = 40,
                                                         # final_lenght = dataset_args['final_lenght'],
                                                         # chunked_lenght = dataset_args['chunked_lenght'],
                                                         random_step = dataset_args['random_step'],
