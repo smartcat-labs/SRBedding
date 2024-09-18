@@ -112,6 +112,11 @@ def make_sentence_transformer(
                                 pooling_mode_cls_token=False,
                                 pooling_mode_max_tokens=False,
                                 pooling_mode_mean_tokens=True)
+<<<<<<< HEAD
+=======
+    m = SentenceTransformer(model_name)
+    m.max_seq_length = max_seq_length
+>>>>>>> origin/feature/refactore
     return SentenceTransformer(modules=[word_embedding_model, pooling_model])
 
 

@@ -3,7 +3,6 @@ import os
 from pathlib import Path
 from typing import Dict, List
 
-from dotenv import load_dotenv
 import openai
 import pandas as pd
 
@@ -18,11 +17,11 @@ def make_dataset(
 ) -> None:
     returned_dict = {
         "context": [],
-        "query": [],
-        # "medium_query": [],
-        # "long_query": [],
-        # "keywords": [],
-        # "scores": [],
+        "short_query": [],
+        "medium_query": [],
+        "long_query": [],
+        "keywords": [],
+        "indexes": [],
     }
     failed = []
     # Open and iterate through the .jsonl file
@@ -36,24 +35,24 @@ def make_dataset(
                     "content"
                 ]
                 returned_data = json.loads(returned_data)
-                query = returned_data["query"]
-                # medium_query = returned_data["medium_query"]
-                # long_query = returned_data["long_query"]
-                # keywords = returned_data["keywords"]
-                # scores = returned_data["scores"]
+                short_query = returned_data["short_query"]
+                medium_query = returned_data["medium_query"]
+                long_query = returned_data["long_query"]
+                keywords = returned_data["keywords"]
+                scores = returned_data["indexes"]
 
                 # Add the data to the returned_dict
-                returned_dict["query"].append(query)
-                # returned_dict["medium_query"].append(medium_query)
-                # returned_dict["long_query"].append(long_query)
-                # returned_dict["keywords"].append(keywords)
-                # returned_dict["scores"].append(scores)
+                returned_dict["short_query"].append(short_query)
+                returned_dict["medium_query"].append(medium_query)
+                returned_dict["long_query"].append(long_query)
+                returned_dict["keywords"].append(keywords)
+                returned_dict["indexes"].append(scores)
                 returned_dict["context"].append(context)
             except Exception as e:
                 failed.append({"context": context, "exception": e})
     if failed:
         save_failed_ids(failed, dataset_name=dataset_name)
-
+    print(returned_dict["indexes"])
     dataset = pd.DataFrame(returned_dict)
     dataset.to_parquet(save_path, engine="pyarrow")
 
@@ -74,7 +73,7 @@ def get_batch_id(file: Path) -> str:
 
 
 def load_contexts(dataset_name: str) -> Dict[int, str]:
-    filename = Path(f"datasets/contexts_{dataset_name}.json")
+    filename = Path(f"datasets/contexts_{dataset_name}_train.json")
 
     with open(filename, "r", encoding="UTF-8") as f:
         sentences_dict = json.load(f)
@@ -83,12 +82,10 @@ def load_contexts(dataset_name: str) -> Dict[int, str]:
 
 
 if __name__ == "__main__":
-    load_dotenv()
     client = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-    # datasets = get_datasets()
-    datasets = ['wiki_mini', 'news_mini', 'literature_mini']
-    for dataset_name in datasets:
-        file_path = f"commands/number_{dataset_name}.txt"
+    datasets = get_datasets()
+    for dataset_name in datasets.keys():
+        file_path = f"commands/number_{dataset_name}_train.txt"
         batch_id = get_batch_id(file=file_path)
 
         batch_job = client.batches.retrieve(batch_id)

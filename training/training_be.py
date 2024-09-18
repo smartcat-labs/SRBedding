@@ -72,7 +72,11 @@ def get_train_and_eval_datasets(
     # Manually split the dataset while retaining the original structure
     dataset_size = len(training_samples)
     train_size = int(0.8 * dataset_size)
+<<<<<<< HEAD
     dev_size = int(0.1 * dataset_size) # this should be done with seed
+=======
+    dev_size = int(0.1 * dataset_size)
+>>>>>>> origin/feature/refactore
 
     train_samples = training_samples[:train_size]
     dev_samples = training_samples[train_size : train_size + dev_size]
@@ -220,7 +224,11 @@ def train_bi_encoder(
         run_name="proba",  # Will be used in W&B if `wandb` is installed
         warmup_steps=warmup_steps,
         load_best_model_at_end=True,  # Automatically load the best model at the end of training
+<<<<<<< HEAD
         metric_for_best_model="ndsg@10",  # Assuming you're using loss as the evaluation metric
+=======
+        metric_for_best_model="eval_loss",  # Assuming you're using loss as the evaluation metric
+>>>>>>> origin/feature/refactore
         greater_is_better=False,
         disable_tqdm=False,
         # KeyError: "The `metric_for_best_model` training argument is set to 'eval_cosine_loss', which is not found in the evaluation metrics. The available evaluation metrics are: ['eval_loss', 'eval_sts-dev_pearson_cosine', 'eval_sts-dev_spearman_cosine', 'eval_sts-dev_pearson_manhattan', 'eval_sts-dev_spearman_manhattan', 'eval_sts-dev_pearson_euclidean', 'eval_sts-dev_spearman_euclidean', 'eval_sts-dev_pearson_dot', 'eval_sts-dev_spearman_dot', 'eval_sts-dev_pearson_max', 'eval_sts-dev_spearman_max', 'eval_runtime', 'eval_samples_per_second', 'eval_steps_per_second', 'epoch']. Consider changing the `metric_for_best_model` via the TrainingArguments."

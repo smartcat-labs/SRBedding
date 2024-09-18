@@ -1,10 +1,6 @@
-import os
 import random
 from pathlib import Path
 from typing import List
-
-from dotenv import load_dotenv
-import openai
 
 from chunking_pipeline import get_chunks
 from datasets_loading import get_datasets
@@ -47,18 +43,16 @@ def make_subset_from_all_sentences(all_sentences: List[str], final_lenght: int, 
     return final_sentences
 
 if __name__== "__main__":
-    load_dotenv()
-    openai.api_key = os.getenv("OPENAI_API_KEY")
     datasets = get_datasets()
 
     for dataset_name, dataset_args in datasets.items():
         all_sentences =dataset_args['loading_function']()
         print(dataset_name)
         filthered_sentences = make_subset_from_all_sentences(all_sentences=all_sentences,
-                                                        # final_lenght = 200,
-                                                        # chunked_lenght = 30,
-                                                        final_lenght = dataset_args['final_lenght'],
-                                                        chunked_lenght = dataset_args['chunked_lenght'],
+                                                        final_lenght = 50,
+                                                        chunked_lenght = 20,
+                                                        # final_lenght = dataset_args['final_lenght'],
+                                                        # chunked_lenght = dataset_args['chunked_lenght'],
                                                         random_step = dataset_args['random_step'],
                                                         random_step_start = dataset_args['random_step_start'],
                                                         )

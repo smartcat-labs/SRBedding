@@ -152,18 +152,18 @@ def get_datasets() -> Dict[str, Dict[str, Any]]:
     return {
         "wiki": {
             "loading_function": get_wiki_sentences,
-            "final_lenght": 4500,
+            "final_lenght": 52_000,
             "chunked_lenght": 40,
             "random_step":1_000,
             "random_step_start": 200
         },
-        "news": {
-            "loading_function": get_news_sentences,
-            "final_lenght": 4500,
-            "chunked_lenght": 40,
-            "random_step":1_100,
-            "random_step_start": 300
-        },
+        # "news": {
+        #     "loading_function": get_news_sentences,
+        #     "final_lenght": 90_000,
+        #     "chunked_lenght": 40,
+        #     "random_step":1_100,
+        #     "random_step_start": 300
+        # },
         # "science": {
         #     "loading_function": get_sience_sentences,
         #     "final_lenght": 90_000,
@@ -171,11 +171,11 @@ def get_datasets() -> Dict[str, Dict[str, Any]]:
         #     "random_step":500,
         #     "random_step_start": 10
         # },
-        "literature": {
-            "loading_function": get_literature_sentences,
-            "final_lenght": 4500,
-            "chunked_lenght": 30,
-            "random_step":100,
-            "random_step_start": 0
-        },
+        # "literature": {
+        #     "loading_function": get_literature_sentences,
+        #     "final_lenght": 36_000,
+        #     "chunked_lenght": 30,
+        #     "random_step":100,
+        #     "random_step_start": 0
+        # },
     }
