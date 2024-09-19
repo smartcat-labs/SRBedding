@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 sys.path.append("..")
 from prompt_4o_testing import PROMPT
 
-from api_request_parallel_processor import run_api_request_processor
+from training_dataset.api_request_parallel_processor import run_api_request_processor
 
 
 def save_jobs(

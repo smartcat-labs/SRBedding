@@ -12,7 +12,7 @@ from pprint import pprint
 from statistics import median
 from pathlib import Path
 sys.path.append('..')
-from api_request_parallel_processor import run_api_request_processor
+from training_dataset.api_request_parallel_processor import run_api_request_processor
 
 def save_jobs(sentences: List[Dict[str, str]], filename: Path, model: str = "text-embedding-3-small") -> None:    
 
@@ -309,7 +309,7 @@ def split_chunk(big_chunk: str, smallest_size: int, largest_size: int) -> List[s
         elif token_size>=largest_size:
             current_sentence = ""
         else:
-            current_sentence += sentence
+            current_sentence += sentence 
     return splits
 
 def get_filtered_chunks(chunks: List[str]) -> List[str]:
