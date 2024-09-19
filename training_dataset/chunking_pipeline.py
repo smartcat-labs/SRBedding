@@ -309,8 +309,16 @@ def split_chunk(big_chunk: str, smallest_size: int, largest_size: int) -> List[s
         elif token_size>=largest_size:
             current_sentence = ""
         else:
-            current_sentence += sentence
+            current_sentence += "." + sentence
     return splits
+
+def remove_start_dot(chunks):
+    updated_chunks = []
+    for chunk in chunks:
+        if chunk.startswith('.'):
+            chunk = chunk[1:].strip()
+        updated_chunks.append(chunk)
+    return updated_chunks
 
 def get_filtered_chunks(chunks: List[str]) -> List[str]:
     """
@@ -346,7 +354,7 @@ def get_filtered_chunks(chunks: List[str]) -> List[str]:
             filtered.append(chunk)
         else:
             filtered.extend(split_chunk(chunk, smallest_size, largest_size))
-    return filtered 
+    return remove_start_dot(filtered) 
 
 
 def get_chunks(sentences: List[str], buffer_size: int) -> List[str]:

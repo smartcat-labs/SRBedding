@@ -8,7 +8,7 @@ from datasets_loading import get_datasets
 from batch_query_creation import generate_query
 
 
-def make_subset_from_all_sentences(all_sentences: List[str], final_lenght: int, chunked_lenght:int, random_step: int, random_step_start: int = 2000) -> List[str]:
+def make_subset_from_all_sentences(all_sentences: List[str], final_lenght: int, chunked_lenght:int, jump: int) -> List[str]:
     """
     Creates a subset of sentences by selecting chunks from the input list with random steps.
 
@@ -39,7 +39,7 @@ def make_subset_from_all_sentences(all_sentences: List[str], final_lenght: int, 
             if len(sentence) < 100_000
         ]
         final_sentences.extend(sentences)
-        start += chunked_lenght + random.randint(random_step_start, random_step)
+        start += chunked_lenght + jump
     return final_sentences
 
 if __name__== "__main__":
@@ -50,11 +50,10 @@ if __name__== "__main__":
         print(dataset_name)
         filthered_sentences = make_subset_from_all_sentences(all_sentences=all_sentences,
                                                         final_lenght = 50,
-                                                        chunked_lenght = 20,
+                                                        chunked_lenght = 40,
                                                         # final_lenght = dataset_args['final_lenght'],
                                                         # chunked_lenght = dataset_args['chunked_lenght'],
-                                                        random_step = dataset_args['random_step'],
-                                                        random_step_start = dataset_args['random_step_start'],
+                                                        jump = dataset_args['jump'],
                                                         )
         finall_contexts = get_chunks(filthered_sentences, buffer_size=2)
         generate_query(contexts=finall_contexts, save_filepath=Path(f"datasets/{dataset_name}_train.parquet"))

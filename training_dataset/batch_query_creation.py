@@ -6,7 +6,7 @@ from typing import List
 
 import openai
 from dotenv import load_dotenv
-from query_prompt import PROMPT
+from query_prompt import PROMPT_OLD
 
 
 def save_jobs(
@@ -148,7 +148,7 @@ def generate_query(contexts: List[str], save_filepath: Path):
     command_path.parent.mkdir(parents=True, exist_ok=True)
     save_filepath.parent.mkdir(parents=True, exist_ok=True)
 
-    save_jobs(contexts, command_path, PROMPT, dataset_name)
+    save_jobs(contexts, command_path, PROMPT_OLD, dataset_name)
 
     batch_requests(jobs_file=command_path, dataset_name=dataset_name)
 
