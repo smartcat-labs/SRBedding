@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 from typing import Dict, List
 
+from dotenv import load_dotenv
 import openai
 import pandas as pd
 
@@ -72,7 +73,7 @@ def get_batch_id(file: Path) -> str:
 
 
 def load_contexts(dataset_name: str) -> Dict[int, str]:
-    filename = Path(f"datasets/contexts_{dataset_name}_train.json")
+    filename = Path(f"datasets/contexts_{dataset_name}_{model}.json")
 
     with open(filename, "r", encoding="UTF-8") as f:
         sentences_dict = json.load(f)
@@ -81,10 +82,13 @@ def load_contexts(dataset_name: str) -> Dict[int, str]:
 
 
 if __name__ == "__main__":
+    load_dotenv()
     client = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-    datasets = get_datasets()
-    for dataset_name in datasets.keys():
-        file_path = f"commands/number_{dataset_name}_train.txt"
+    # datasets = get_datasets()
+    dataset_names = ['wiki_mini', 'news_mini', 'literature_mini']
+    model = "o1-mini"
+    for dataset_name in dataset_names:
+        file_path = f"commands/number_{dataset_name}_{model}.txt"
         batch_id = get_batch_id(file=file_path)
 
         batch_job = client.batches.retrieve(batch_id)
@@ -92,13 +96,13 @@ if __name__ == "__main__":
         if batch_job.status != "completed":
             continue
         print(batch_job)
-        result_file_name = f"commands/results_{dataset_name}.jsonl"
+        result_file_name = f"commands/results_{dataset_name}_{model}.jsonl"
         result_file_id = batch_job.output_file_id
         result = client.files.content(result_file_id).content
         with open(result_file_name, "wb") as file:
             file.write(result)
 
-        final_save_path = Path(f"datasets/{dataset_name}.parquet")
+        final_save_path = Path(f"datasets/{dataset_name}_{model}.parquet")
 
         contexts = load_contexts(dataset_name)
         make_dataset(

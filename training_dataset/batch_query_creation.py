@@ -6,7 +6,9 @@ from typing import List
 
 import openai
 from dotenv import load_dotenv
-from query_prompt import PROMPT_OLD
+from prompt_4o_testing import PROMPT_A
+import sys
+sys.path.append("..")
 
 
 def save_jobs(
@@ -14,7 +16,7 @@ def save_jobs(
     filename: Path,
     prompt_template: str,
     dataset_name: str,
-    model: str = "gpt-3.5-turbo-0125",
+    model: str = "gpt-4o-mini",
 ) -> None:
     """
     Saves a list of sentences as formatted jobs into a specified .jsonl file.
@@ -148,7 +150,7 @@ def generate_query(contexts: List[str], save_filepath: Path):
     command_path.parent.mkdir(parents=True, exist_ok=True)
     save_filepath.parent.mkdir(parents=True, exist_ok=True)
 
-    save_jobs(contexts, command_path, PROMPT_OLD, dataset_name)
+    save_jobs(contexts, command_path, PROMPT_A, dataset_name)
 
     batch_requests(jobs_file=command_path, dataset_name=dataset_name)
 
@@ -171,7 +173,10 @@ def environment_setup():
 
 
 if __name__ == "__main__":
-    with open("chunking_example/chunking_test_example.json", "r") as file:
-        contexts = json.load(file)
-    sentences = contexts["contexts"]
-    generate_query(contexts=sentences, save_filepath=Path("datasets/train.parquet"))
+    dataset_name = ['wiki_mini', 'news_mini', 'literature_mini']
+    model = "gpt-4o-mini"
+    for dataset in dataset_name:
+        with open(f"datasets/{dataset}.json", "r") as file:
+            contexts = json.load(file)
+        sentences = contexts["contexts"][:20]
+        generate_query(contexts=sentences, save_filepath=Path(f"datasets/{dataset}_{model}.parquet"))
