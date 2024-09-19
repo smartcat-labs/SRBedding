@@ -9,8 +9,8 @@ def create_sentences(texts: List[str]) -> List[str]:
     """
     Extracts and returns sentences wrapped in <s> and </s> tags from a list of texts.
 
-    This function processes a list of text strings, searching each text for sentences 
-    enclosed within `<s>` and `</s>` tags. It extracts these sentences and returns 
+    This function processes a list of text strings, searching each text for sentences
+    enclosed within `<s>` and `</s>` tags. It extracts these sentences and returns
     them as a list.
 
     Args:
@@ -27,17 +27,21 @@ def create_sentences(texts: List[str]) -> List[str]:
     """
     sentences = []
     for text in texts:
-        matches = re.findall(r'<s>(.*?)</s>', text)
-        sentences.extend(matches)
-    
+        matches = re.findall(r"<s>(.*?)</s>", text)
+        for match in matches:
+            if not match.endswith("."):
+                match += "."
+            sentences.append(match)
+
     return sentences
 
-def load_datset_with_cashe(dataset_name:str) -> Dataset:
+
+def load_datset_with_cashe(dataset_name: str) -> Dataset:
     """
     Loads a dataset using the Hugging Face `datasets` library with a specified cache directory.
 
-    This function loads a dataset by name using the Hugging Face `datasets` library, 
-    storing the dataset in a specified cache directory. If the directory does not exist, 
+    This function loads a dataset by name using the Hugging Face `datasets` library,
+    storing the dataset in a specified cache directory. If the directory does not exist,
     it is created.
 
     Args:
@@ -55,11 +59,21 @@ def load_datset_with_cashe(dataset_name:str) -> Dataset:
     dir.mkdir(parents=True, exist_ok=True)
     return load_dataset(dataset_name, cache_dir=dir)
 
+
+def add_period_to_sentences(sentences):
+    updated_sentences = []
+    for sentence in sentences:
+        if not sentence.endswith("."):
+            sentence += "."
+        updated_sentences.append(sentence)
+    return updated_sentences
+
+
 def get_wiki_sentences() -> List[str]:
     """
     Loads and returns sentences from the Serbian Wikipedia dataset.
 
-    This function loads the "jerteh/SrpWiki" dataset using the `load_dataset_with_cache` function 
+    This function loads the "jerteh/SrpWiki" dataset using the `load_dataset_with_cache` function
     and returns the text from the training split of the dataset.
 
     Returns:
@@ -69,13 +83,15 @@ def get_wiki_sentences() -> List[str]:
         >>> wiki_sentences = get_wiki_sentences()
     """
     dataset = load_datset_with_cashe("jerteh/SrpWiki")
-    return dataset['train']['text']
+    wiki_sentences = dataset["train"]["text"]
+    return add_period_to_sentences(wiki_sentences)
+
 
 def get_news_sentences() -> List[str]:
     """
     Loads and returns sentences from the Serbian news dataset.
 
-    This function loads the "jerteh/SrpKorNews" dataset using the `load_dataset_with_cache` function. 
+    This function loads the "jerteh/SrpKorNews" dataset using the `load_dataset_with_cache` function.
     It extracts sentences wrapped in `<s>` and `</s>` tags from the text in the training split.
 
     Returns:
@@ -85,15 +101,16 @@ def get_news_sentences() -> List[str]:
         >>> news_sentences = get_news_sentences()
     """
     dataset = load_datset_with_cashe("jerteh/SrpKorNews")
-    text_news = dataset['train']['text']
+    text_news = dataset["train"]["text"]
     return create_sentences(text_news)
+
 
 def get_sience_sentences() -> List[str]:
     """
     Loads and returns sentences from the Serbian science dataset.
 
-    This function loads the "procesaur/STARS" dataset using the `load_dataset_with_cache` function. 
-    It extracts the first 450,000 text entries from the training split and creates sentences 
+    This function loads the "procesaur/STARS" dataset using the `load_dataset_with_cache` function.
+    It extracts the first 450,000 text entries from the training split and creates sentences
     wrapped in `<s>` and `</s>` tags.
 
     Returns:
@@ -103,14 +120,15 @@ def get_sience_sentences() -> List[str]:
         >>> science_sentences = get_sience_sentences()
     """
     dataset = load_datset_with_cashe("procesaur/STARS")
-    text_sci = dataset['train']['text']
+    text_sci = dataset["train"]["text"]
     return create_sentences(text_sci[:450_000])
+
 
 def get_literature_sentences() -> List[str]:
     """
     Loads and returns sentences from the Serbian literature dataset.
 
-    This function loads the "jerteh/SrpELTeC" dataset using the `load_dataset_with_cache` function. 
+    This function loads the "jerteh/SrpELTeC" dataset using the `load_dataset_with_cache` function.
     It extracts sentences wrapped in `<s>` and `</s>` tags from the text in the training split.
 
     Returns:
@@ -120,22 +138,21 @@ def get_literature_sentences() -> List[str]:
         >>> literature_sentences = get_literature_sentences()
     """
     dataset = load_datset_with_cashe("jerteh/SrpELTeC")
-    text_lit = dataset['train']['text']
+    text_lit = dataset["train"]["text"]
     return create_sentences(text_lit)
-
 
 
 def get_datasets() -> Dict[str, Dict[str, Any]]:
     """
     Returns a dictionary of datasets with their corresponding loading functions and parameters.
 
-    This function provides a dictionary containing different datasets, each associated with 
-    its specific loading function and parameters. These parameters include the final length 
-    of the subset to be generated, the length of each chunk, and the random steps used 
+    This function provides a dictionary containing different datasets, each associated with
+    its specific loading function and parameters. These parameters include the final length
+    of the subset to be generated, the length of each chunk, and the random steps used
     for selecting chunks of sentences.
 
     Returns:
-        Dict[str, Dict[str, Any]]: A dictionary where the keys are dataset names and the values 
+        Dict[str, Dict[str, Any]]: A dictionary where the keys are dataset names and the values
         are dictionaries containing:
             - "loading_function" (Callable): The function used to load sentences from the dataset.
             - "final_lenght" (int): The target number of sentences in the final subset.
@@ -154,28 +171,24 @@ def get_datasets() -> Dict[str, Dict[str, Any]]:
             "loading_function": get_wiki_sentences,
             "final_lenght": 52_000,
             "chunked_lenght": 40,
-            "random_step":1_000,
-            "random_step_start": 200
+            "jump": 500,
         },
-        # "news": {
-        #     "loading_function": get_news_sentences,
-        #     "final_lenght": 90_000,
-        #     "chunked_lenght": 40,
-        #     "random_step":1_100,
-        #     "random_step_start": 300
-        # },
-        # "science": {
-        #     "loading_function": get_sience_sentences,
-        #     "final_lenght": 90_000,
-        #     "chunked_lenght": 40,
-        #     "random_step":500,
-        #     "random_step_start": 10
-        # },
-        # "literature": {
-        #     "loading_function": get_literature_sentences,
-        #     "final_lenght": 36_000,
-        #     "chunked_lenght": 30,
-        #     "random_step":100,
-        #     "random_step_start": 0
-        # },
+        "news": {
+            "loading_function": get_news_sentences,
+            "final_lenght": 90_000,
+            "chunked_lenght": 40,
+            "jump": 600,
+        },
+        "science": {
+            "loading_function": get_sience_sentences,
+            "final_lenght": 90_000,
+            "chunked_lenght": 40,
+            "jump": 200,
+        },
+        "literature": {
+            "loading_function": get_literature_sentences,
+            "final_lenght": 36_000,
+            "chunked_lenght": 30,
+            "jump": 200,
+        },
     }

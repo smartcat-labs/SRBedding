@@ -5,24 +5,22 @@ import random
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
+from pprint import pprint
 from typing import List, Tuple
 
 import pandas
 import pyarrow.parquet as pq
 import sentence_transformers.losses as losses
 from datasets import Dataset
-from sentence_transformers import (
-    SentenceTransformer,
-    SentenceTransformerTrainer,
-    SentenceTransformerTrainingArguments,
-)
-from sentence_transformers.evaluation import (
-    EmbeddingSimilarityEvaluator,
-    SimilarityFunction,
-)
+from sentence_transformers import (SentenceTransformer,
+                                   SentenceTransformerTrainer,
+                                   SentenceTransformerTrainingArguments,
+                                   models)
+from sentence_transformers.evaluation import BinaryClassificationEvaluator
 from sentence_transformers.readers import InputExample
 from sklearn.model_selection import train_test_split
-from transformers import AutoTokenizer, TrainerCallback, TrainerControl, TrainerState
+from transformers import (AutoTokenizer, TrainerCallback, TrainerControl,
+                          TrainerState)
 
 # Set up basic configuration for logging
 logging.basicConfig(level=logging.INFO)
@@ -44,7 +42,8 @@ def load_pandas_df(file: Path) -> pandas.DataFrame:
     return loaded_table.to_pandas()
 
 
-def convert_to_hf_dataset(dataframe: pandas.DataFrame, question_type: str) -> Dataset:
+def convert_to_hf_dataset(dataframe: pandas.DataFrame, question_type:str) -> Dataset:
+    # Convert each InputExample into a dictionary
     # Convert each InputExample into a dictionary
     data_dict = {"sentence1": [], "sentence2": [], "score": []}
     for inx, row in dataframe.iterrows():
@@ -66,19 +65,19 @@ def convert_to_hf_dataset(dataframe: pandas.DataFrame, question_type: str) -> Da
     # Create a Hugging Face Dataset
     return Dataset.from_dict(data_dict)
 
-
 def sanity_check(train_df, eval_df):
-    dataset_counts_train = train_df["dataset"].value_counts()
-    dataset_counts_eval = eval_df["dataset"].value_counts()
+    dataset_counts_train = train_df['dataset'].value_counts()
+    dataset_counts_eval = eval_df['dataset'].value_counts()
     dataset_proportions = dataset_counts_train / dataset_counts_train.sum()
     print(dataset_proportions)
     dataset_proportions = dataset_counts_eval / dataset_counts_eval.sum()
     print(dataset_proportions)
 
-
 def get_train_and_eval_datasets(
-    dataset_name: Path, question_type: str
+    dataset_name: Path,
+    question_type:str
 ) -> Tuple[Dataset, Dataset]:
+    
     df = load_pandas_df(file=dataset_name)
     train_df, eval_df = train_test_split(df, test_size=0.2, random_state=42)
     sanity_check(train_df, eval_df)
@@ -92,29 +91,29 @@ def get_train_and_eval_datasets(
 def make_sentence_transformer(
     model_name: str, max_seq_length: int = 512
 ) -> SentenceTransformer:
-    # word_embedding_model = models.Transformer(model_name, max_seq_length=max_seq_length)
-    # # Apply mean pooling to get one fixed sized sentence vector
-    # pooling_model = models.Pooling(word_embedding_model.get_word_embedding_dimension(),
-    #                             pooling_mode_cls_token=False,
-    #                             pooling_mode_max_tokens=False,
-    #                             pooling_mode_mean_tokens=True)
-    # return SentenceTransformer(modules=[word_embedding_model, pooling_model])
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    tokenizer.model_max_length = max_seq_length  # Set the max length for the model
-    tokenizer.padding_side = (
-        "right"  # You can set "left" if you want to pad on the left side
-    )
-    # tokenizer.pad_token = tokenizer.eos_token  # Ensure the pad token is set
-    model = SentenceTransformer(model_name)
-    # Add the padding and truncation to the encode method
-    model.tokenizer = tokenizer
-    model.tokenizer_kwargs = {
-        "padding": "max_length",
-        "truncation": True,
-        "max_length": max_seq_length,
-        "return_tensors": "pt",  # Assuming you want PyTorch tensors as output
-    }
-    return model
+    # tokenizer = AutoTokenizer.from_pretrained(model_name)
+    # tokenizer.model_max_length = max_seq_length  # Set the max length for the model
+    # tokenizer.padding_side = (
+    #     "right"  # You can set "left" if you want to pad on the left side
+    # )
+    # # tokenizer.pad_token = tokenizer.eos_token  # Ensure the pad token is set
+    # model = SentenceTransformer(model_name)
+    # # Add the padding and truncation to the encode method
+    # model.tokenizer = tokenizer
+    # model.tokenizer_kwargs = {
+    #     "padding": "max_length",
+    #     "truncation": True,
+    #     "max_length": max_seq_length,
+    #     "return_tensors": "pt",  # Assuming you want PyTorch tensors as output
+    # }
+    # return model
+    word_embedding_model = models.Transformer(model_name, max_seq_length=max_seq_length)
+    # Apply mean pooling to get one fixed sized sentence vector
+    pooling_model = models.Pooling(word_embedding_model.get_word_embedding_dimension(),
+                                pooling_mode_cls_token=False,
+                                pooling_mode_max_tokens=False,
+                                pooling_mode_mean_tokens=True)
+    return SentenceTransformer(modules=[word_embedding_model, pooling_model])
 
 
 class EvalLoggingCallback(TrainerCallback):
@@ -157,19 +156,23 @@ class EvalLoggingCallback(TrainerCallback):
 
         self.write_in_log_file(eval_output, "on_evaluate.jsonl")
 
+
 def train_a_model(
     sentence_transformer: SentenceTransformer,
     args: SentenceTransformerTrainingArguments,
-    train_dataset,
-    eval_dataset,
+    dataset_name
 ):
-    train_loss = losses.CosineSimilarityLoss(model=sentence_transformer)
+    train_dataset, eval_dataset= get_train_and_eval_datasets(
+        dataset_name,
+        QueryType.SHORT.value
+    )
+    train_loss = losses.MultipleNegativesRankingLoss(model=sentence_transformer)
     # train_loss = losses.MatryoshkaLoss(
     #     sentence_transformer, train_loss, [768, 512, 256, 128, 64]
     # )
-    eval_path = Path(args.output_dir)
+    bi_encoder_path = Path(args.output_dir).parent
     # # 6. (Optional) Create an evaluator & evaluate the base model
-    dev_evaluator = make_evaluator(eval_dataset, sentence_transformer, eval_path.parent)
+    dev_evaluator = make_evaluator(eval_dataset, sentence_transformer, bi_encoder_path)
 
     # 7. Create a trainer & train
     trainer = SentenceTransformerTrainer(
@@ -179,32 +182,31 @@ def train_a_model(
         eval_dataset=eval_dataset,
         loss=train_loss,
         evaluator=dev_evaluator,
-        callbacks=[EvalLoggingCallback()],
+        callbacks=[EvalLoggingCallback(save_path=bi_encoder_path)],
     )
     trainer.train()
 
     # # (Optional) Evaluate the trained model on the test set
-    make_evaluator(eval_dataset, sentence_transformer, eval_path.parent)
+    make_evaluator(eval_dataset, sentence_transformer, bi_encoder_path)
 
     # 8. Save the trained model
     # TODO da li ovako cuvati
-    sentence_transformer.save_pretrained(f"{eval_path.parent}/final_model")
+    sentence_transformer.save_pretrained(f"{bi_encoder_path}/final_model")
 
     # 9. (Optional) Push it to the Hugging Face Hub
     # model.push_to_hub("mpnet-base-all-nli-triplet")
 
 
 def make_evaluator(dataset, sentence_transformer, savePath: Path):
-    dev_evaluator = EmbeddingSimilarityEvaluator(
+    dev_evaluator = BinaryClassificationEvaluator(
         sentences1=dataset["sentence1"],
         sentences2=dataset["sentence2"],
-        scores=dataset["score"],
-        main_similarity=SimilarityFunction.COSINE,
+        labels=dataset["score"],
+        # main_similarity=SimilarityFunction.COSINE,
         name="sts-dev",
         write_csv=True,
     )
-    result_path = Path(f"output/{savePath.name}/eval/")
-    result_path.mkdir(exist_ok=True)
+    result_path = make_path(f"{savePath}/eval/")
     dev_evaluator(model=sentence_transformer, output_path=result_path)
     return dev_evaluator
 
@@ -250,11 +252,7 @@ def train_bi_encoder(
         logging_steps=100,
         run_name="proba",  # Will be used in W&B if `wandb` is installed
         load_best_model_at_end=True,  # Automatically load the best model at the end of training
-<<<<<<< HEAD
-        metric_for_best_model="ndsg@10",  # Assuming you're using loss as the evaluation metric
-=======
         metric_for_best_model="eval_loss",  # Assuming you're using loss as the evaluation metric
->>>>>>> origin/feature/refactore
         greater_is_better=False,
         disable_tqdm=False,
        )
