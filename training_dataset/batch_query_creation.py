@@ -16,7 +16,7 @@ def save_jobs(
     filename: Path,
     prompt_template: str,
     dataset_name: str,
-    model: str = "gpt-4o-mini",
+    model: str = "gpt-4o-2024-08-06",
 ) -> None:
     """
     Saves a list of sentences as formatted jobs into a specified .jsonl file.
@@ -173,10 +173,9 @@ def environment_setup():
 
 
 if __name__ == "__main__":
-    dataset_name = ['wiki_mini', 'news_mini', 'literature_mini']
-    model = "gpt-4o-mini"
+    dataset_name = ['wiki', 'news', 'literature']
     for dataset in dataset_name:
         with open(f"datasets/{dataset}.json", "r") as file:
             contexts = json.load(file)
         sentences = contexts["contexts"][:20]
-        generate_query(contexts=sentences, save_filepath=Path(f"datasets/{dataset}_{model}.parquet"))
+        generate_query(contexts=sentences, save_filepath=Path(f"datasets/{dataset}_4o.parquet"))

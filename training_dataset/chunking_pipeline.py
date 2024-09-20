@@ -7,6 +7,7 @@ from pprint import pprint
 from statistics import median
 from typing import Dict, List
 
+from dotenv import load_dotenv
 import numpy as np
 import openai
 import tiktoken
@@ -417,6 +418,8 @@ def get_chunks(sentences: List[str], buffer_size: int) -> List[str]:
     >>> chunks = get_chunks(sentences, buffer_size)
     >>> print(chunks)
     """
+    load_dotenv()
+    openai.api_key = os.getenv("OPENAI_API_KEY")
     sentences_dic = return_dic(sentences)
     sentences_comb = combine_sentences(sentences_dic, buffer_size)
     sentences_embed = generate_embeddings(sentences_comb)
@@ -429,13 +432,25 @@ def get_chunks(sentences: List[str], buffer_size: int) -> List[str]:
 
 if __name__ == "__main__":
     # set environment
+    load_dotenv()
     openai.api_key = os.getenv("OPENAI_API_KEY")
 
-    with open(
-        "chunking_example/chunking_test_example.json", "r", encoding="UTF-8"
-    ) as file:
-        contexts = json.load(file)
-    sentences = contexts["contexts"]
-    chunks = get_chunks(sentences=sentences, buffer_size=1)
-    print(len(chunks))
-    pprint(chunks)
+    datasets = ['wiki', 'news', 'literature']
+    for dataset in datasets:
+        with open(
+            "datasets/contexts_{dataset}_4o.json", "r", encoding="UTF-8"
+        ) as file:
+            contexts = json.load(file)
+        sentences = contexts["contexts"]
+        chunks = get_chunks(sentences=sentences, buffer_size=1)
+
+
+
+    # with open(
+    #     "chunking_example/chunking_test_example.json", "r", encoding="UTF-8"
+    # ) as file:
+    #     contexts = json.load(file)
+    # sentences = contexts["contexts"]
+    # chunks = get_chunks(sentences=sentences, buffer_size=1)
+    # print(len(chunks))
+    # pprint(chunks)

@@ -179,12 +179,12 @@ def get_datasets() -> Dict[str, Dict[str, Any]]:
             "chunked_lenght": 40,
             "jump": 600,
         },
-        "science": {
-            "loading_function": get_sience_sentences,
-            "final_lenght": 90_000,
-            "chunked_lenght": 40,
-            "jump": 200,
-        },
+        # "science": {
+        #     "loading_function": get_sience_sentences,
+        #     "final_lenght": 90_000,
+        #     "chunked_lenght": 40,
+        #     "jump": 200,
+        # },
         "literature": {
             "loading_function": get_literature_sentences,
             "final_lenght": 36_000,

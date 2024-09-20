@@ -12,7 +12,7 @@ from openai import OpenAI
 from prompts import SYSTEM_PROMPT
 
 sys.path.append("..")
-from training_dataset.api_request_parallel_processor import run_api_request_processor
+from api_request_parallel_processor import run_api_request_processor
 
 
 def make_jobs(

@@ -56,14 +56,14 @@ if __name__ == "__main__":
         print(dataset_name)
         filthered_sentences = make_subset_from_all_sentences(
             all_sentences=all_sentences,
-            final_lenght=50,
-            chunked_lenght=40,
-            # final_lenght = dataset_args['final_lenght'],
-            # chunked_lenght = dataset_args['chunked_lenght'],
+            # final_lenght=30,
+            # chunked_lenght=40,
+            final_lenght = dataset_args['final_lenght'],
+            chunked_lenght = dataset_args['chunked_lenght'],
             jump=dataset_args["jump"],
         )
         finall_contexts = get_chunks(filthered_sentences, buffer_size=2)
         generate_query(
             contexts=finall_contexts,
-            save_filepath=Path(f"datasets/{dataset_name}_train.parquet"),
+            save_filepath=Path(f"datasets/{dataset_name}_4o.parquet"),
         )

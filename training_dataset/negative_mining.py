@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 from tqdm import tqdm
 
 sys.path.append('..')
-from training_dataset.api_request_parallel_processor import run_api_request_processor
+from api_request_parallel_processor import run_api_request_processor
 
 
 def save_jobs(sentences: List[str], filename: Path, model: str = "text-embedding-3-small") -> None:    

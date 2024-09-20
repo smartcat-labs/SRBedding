@@ -16,7 +16,7 @@ from transformers import AutoModel
 warnings.filterwarnings("ignore")
 
 sys.path.append("..")
-from training_dataset.api_request_parallel_processor import run_api_request_processor
+from api_request_parallel_processor import run_api_request_processor
 
 
 def save_jobs(
