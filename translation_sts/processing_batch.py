@@ -65,14 +65,11 @@ def make_final(tranlated_sentences):
     sts = load_dataset("mteb/stsbenchmark-sts", cache_dir=datasets_dir)
     sts_test_df = pd.DataFrame(sts["test"])
     for i, row in sts_test_df.iterrows():
-        if i > 10:
-            break
         sid = row["sid"]
         srb = tranlated_sentences[sid]
         sts_test_df.at[i, "sentence2"] = srb  # Modify the 'sentence2' column directly
         print(srb)
     return sts_test_df
-
 
 def save_in_file(processed_commands_path: Path, save_path: Path) -> None:
     tranlated_sentences = make_dataset(processed_commands_path, save_path.stem)

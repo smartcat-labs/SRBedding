@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Tuple
 from datasets import load_dataset
 from openai import OpenAI
 import pandas as pd
-from prompts import SYSTEM_PROMPT
+from translation_sts.prompts_sts import SYSTEM_PROMPT
 
 
 def make_jobs(
