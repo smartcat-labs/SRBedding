@@ -168,3 +168,5 @@ cython_debug/
 */output
 */commands
 
+# MacOS files
+*.DS_Store
