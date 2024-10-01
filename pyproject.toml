@@ -37,6 +37,7 @@ fastparquet = "^2024.5.0"
 fasttext = "^0.9.3"
 tensorboard = "^2.17.1"
 quanto = "^0.2.0"
+nltk = "^3.9.1"
 
 
 
