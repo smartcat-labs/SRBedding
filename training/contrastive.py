@@ -19,8 +19,7 @@ from sentence_transformers import (
 )
 from sentence_transformers.evaluation import InformationRetrievalEvaluator
 from sentence_transformers.readers import InputExample
-from transformers import AutoTokenizer, TrainerCallback, TrainerControl, TrainerState
-from pprint import pprint
+from transformers import TrainerCallback, TrainerControl, TrainerState
 
 # Set up basic configuration for logging
 logging.basicConfig(level=logging.INFO)
@@ -43,14 +42,12 @@ def convert_dataset(
     dataset_samples = []
     for _, row in dataframe.iterrows():
         sample = InputExample(
-            texts=[row[question_type], row["context"]],
-            label=1
+            texts=[row[question_type], row["context"]], label=1
         )  ## anchor and positive
         dataset_samples.append(sample)
         for negative in row["neg"]:
             sample = InputExample(
-            texts=[row[question_type], negative],
-            label=0
+                texts=[row[question_type], negative], label=0
             )  ## anchor and negative
             dataset_samples.append(sample)
 
@@ -62,7 +59,7 @@ def convert_to_hf_dataset(input_examples: List[InputExample]) -> Dataset:
     data_dict = {
         "anchor": [ex.texts[0] for ex in input_examples],
         "positive": [ex.texts[1] for ex in input_examples],
-        "label": [ex.label for ex in input_examples]
+        "label": [ex.label for ex in input_examples],
     }
 
     # Create a Hugging Face Dataset
@@ -74,7 +71,7 @@ def get_train_and_eval_datasets(
 ) -> Tuple[Dataset, Dataset, Dataset, List]:
     # NOTE francuzi su 70:15:15 ovde je 80:10:10
     df = load_df(file=dataset_name)
-    training_samples = convert_dataset(df, 'query')
+    training_samples = convert_dataset(df, "query")
 
     random.shuffle(training_samples)
 
@@ -116,10 +113,12 @@ def make_sentence_transformer(
     # return model
     word_embedding_model = models.Transformer(model_name, max_seq_length=max_seq_length)
     # Apply mean pooling to get one fixed sized sentence vector
-    pooling_model = models.Pooling(word_embedding_model.get_word_embedding_dimension(),
-                                pooling_mode_cls_token=False,
-                                pooling_mode_max_tokens=False,
-                                pooling_mode_mean_tokens=True)
+    pooling_model = models.Pooling(
+        word_embedding_model.get_word_embedding_dimension(),
+        pooling_mode_cls_token=False,
+        pooling_mode_max_tokens=False,
+        pooling_mode_mean_tokens=True,
+    )
     return SentenceTransformer(modules=[word_embedding_model, pooling_model])
 
 
@@ -214,11 +213,13 @@ def getDictionariesForEval(dataset):
             corpus[str(index)] = positive
 
     # Build the queries, corpus, and relevant_docs based on the mapping
-    for index, (anchor, positive) in enumerate(zip(dataset["anchor"], dataset["positive"])):
+    for index, (anchor, positive) in enumerate(
+        zip(dataset["anchor"], dataset["positive"])
+    ):
         query_id = str(index)
         queries[query_id] = anchor
         # Assign all anchors related to the same positive to the relevant_docs
-        if dataset['label'][index] == 1:
+        if dataset["label"][index] == 1:
             relevant_docs[query_id] = [corpus_map[positive]]
 
     # pprint(dataset['label'])
@@ -305,5 +306,8 @@ def train_bi_encoder(
 
 if __name__ == "__main__":
     main_pipeline(
-        10, 16, "mixedbread-ai/mxbai-embed-large-v1", Path("datasets/long_query_neg.parquet")
+        10,
+        16,
+        "mixedbread-ai/mxbai-embed-large-v1",
+        Path("datasets/long_query_neg.parquet"),
     )

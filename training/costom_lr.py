@@ -1,28 +1,29 @@
 import json
 import logging
-import math
-import random
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from pprint import pprint
-from typing import List, Tuple
+from typing import Tuple
 
 import pandas
 import pyarrow.parquet as pq
 import sentence_transformers.losses as losses
 import torch
 from datasets import Dataset
-from sentence_transformers import (SentenceTransformer,
-                                   SentenceTransformerTrainer,
-                                   SentenceTransformerTrainingArguments,
-                                   models)
+from sentence_transformers import (
+    SentenceTransformer,
+    SentenceTransformerTrainer,
+    SentenceTransformerTrainingArguments,
+    models,
+)
 from sentence_transformers.evaluation import InformationRetrievalEvaluator
-from sentence_transformers.readers import InputExample
 from sklearn.model_selection import train_test_split
 from torch.optim.lr_scheduler import LambdaLR
-from transformers import (AutoTokenizer, TrainerCallback, TrainerControl,
-                          TrainerState, get_scheduler)
+from transformers import (
+    TrainerCallback,
+    TrainerControl,
+    TrainerState,
+)
 
 # Set up basic configuration for logging
 logging.basicConfig(level=logging.INFO)
@@ -32,6 +33,7 @@ class QueryType(Enum):
     SHORT = "short_query"
     MEDIUM = "medium_query"
     LONG = "long_query"
+
 
 def make_path(save_path: str):
     model_save_path = Path(save_path)
@@ -44,31 +46,31 @@ def load_pandas_df(file: Path) -> pandas.DataFrame:
     return loaded_table.to_pandas()
 
 
-def convert_to_hf_dataset(dataframe: pandas.DataFrame, question_type:str) -> Dataset:
+def convert_to_hf_dataset(dataframe: pandas.DataFrame, question_type: str) -> Dataset:
     # Convert each InputExample into a dictionary
     data_dict = {
         "anchor": [],
         "positive": [],
     }
     for _, row in dataframe.iterrows():
-        data_dict['anchor'].append(row[question_type])
-        data_dict['positive'].append(row['context'])
+        data_dict["anchor"].append(row[question_type])
+        data_dict["positive"].append(row["context"])
     # Create a Hugging Face Dataset
     return Dataset.from_dict(data_dict)
 
+
 def sanity_check(train_df, eval_df):
-    dataset_counts_train = train_df['dataset'].value_counts()
-    dataset_counts_eval = eval_df['dataset'].value_counts()
+    dataset_counts_train = train_df["dataset"].value_counts()
+    dataset_counts_eval = eval_df["dataset"].value_counts()
     dataset_proportions = dataset_counts_train / dataset_counts_train.sum()
     print(dataset_proportions)
     dataset_proportions = dataset_counts_eval / dataset_counts_eval.sum()
     print(dataset_proportions)
 
+
 def get_train_and_eval_datasets(
-    dataset_name: Path,
-    question_type:str
+    dataset_name: Path, question_type: str
 ) -> Tuple[Dataset, Dataset]:
-    
     df = load_pandas_df(file=dataset_name)
     train_df, eval_df = train_test_split(df, test_size=0.2, random_state=42)
     sanity_check(train_df, eval_df)
@@ -100,10 +102,12 @@ def make_sentence_transformer(
     # return model
     word_embedding_model = models.Transformer(model_name, max_seq_length=max_seq_length)
     # Apply mean pooling to get one fixed sized sentence vector
-    pooling_model = models.Pooling(word_embedding_model.get_word_embedding_dimension(),
-                                pooling_mode_cls_token=False,
-                                pooling_mode_max_tokens=False,
-                                pooling_mode_mean_tokens=True)
+    pooling_model = models.Pooling(
+        word_embedding_model.get_word_embedding_dimension(),
+        pooling_mode_cls_token=False,
+        pooling_mode_max_tokens=False,
+        pooling_mode_mean_tokens=True,
+    )
     return SentenceTransformer(modules=[word_embedding_model, pooling_model])
 
 
@@ -151,11 +155,10 @@ class EvalLoggingCallback(TrainerCallback):
 def train_a_model(
     sentence_transformer: SentenceTransformer,
     args: SentenceTransformerTrainingArguments,
-    dataset_name
+    dataset_name,
 ):
-    train_dataset, eval_dataset= get_train_and_eval_datasets(
-        dataset_name,
-        QueryType.SHORT.value
+    train_dataset, eval_dataset = get_train_and_eval_datasets(
+        dataset_name, QueryType.SHORT.value
     )
     train_loss = losses.MultipleNegativesRankingLoss(model=sentence_transformer)
     # train_loss = losses.MatryoshkaLoss(
@@ -170,8 +173,11 @@ def train_a_model(
     if len(train_dataset) % args.per_device_train_batch_size != 0:
         num_update_steps_per_epoch += 1
     num_training_steps = num_update_steps_per_epoch * args.num_train_epochs
-    num_warmup_steps = num_training_steps*0.2    # Number of steps to warm up
-    num_constant_steps = num_training_steps*0.2  # Number of steps to keep LR constant after warmup
+    num_warmup_steps = num_training_steps * 0.2  # Number of steps to warm up
+    num_constant_steps = (
+        num_training_steps * 0.2
+    )  # Number of steps to keep LR constant after warmup
+
     def lr_lambda(current_step: int):
         if current_step < num_warmup_steps:
             # Linear warmup phase
@@ -184,6 +190,7 @@ def train_a_model(
             decay_steps = num_training_steps - (num_warmup_steps + num_constant_steps)
             decay_progress = current_step - (num_warmup_steps + num_constant_steps)
             return max(0.0, 1.0 - decay_progress / decay_steps)  # Linearly decay LR
+
     # Create the scheduler with warmup
     scheduler = LambdaLR(optimizer, lr_lambda)
 
@@ -198,7 +205,7 @@ def train_a_model(
         callbacks=[EvalLoggingCallback(save_path=bi_encoder_path)],
         optimizers=(optimizer, scheduler),
     )
-    
+
     trainer.train()
 
     # # (Optional) Evaluate the trained model on the test set
@@ -239,19 +246,13 @@ def make_evaluator(dataset, sentence_transformer, savePath: Path):
 def main_pipeline(
     num_epochs: int, batch_size: int, model_name: str, dataset_name: Path
 ):
-
     model_save_path = make_path(
         f'output/bi_encoder_{datetime.now().strftime("%d-%m-%Y_%H-%M-%S")}'
     )
-    train_bi_encoder(
-        num_epochs, batch_size, model_name, dataset_name, model_save_path
-    )
+    train_bi_encoder(num_epochs, batch_size, model_name, dataset_name, model_save_path)
 
 
-def train_bi_encoder(
-    num_epochs, batch_size, model_name, dataset_name, model_save_path
-):
-
+def train_bi_encoder(num_epochs, batch_size, model_name, dataset_name, model_save_path):
     args = SentenceTransformerTrainingArguments(
         # Required parameter:
         output_dir=f"{model_save_path}/model",
@@ -280,7 +281,7 @@ def train_bi_encoder(
         metric_for_best_model="eval_loss",  # Assuming you're using loss as the evaluation metric
         greater_is_better=False,
         disable_tqdm=False,
-       )
+    )
     train_a_model(
         sentence_transformer=make_sentence_transformer(model_name),
         args=args,

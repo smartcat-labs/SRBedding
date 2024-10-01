@@ -5,9 +5,7 @@ from pathlib import Path
 from typing import Tuple
 
 import numpy as np
-import pandas
-import pyarrow.parquet as pq
-from datasets import Dataset, concatenate_datasets, load_dataset
+from datasets import Dataset, load_dataset
 from sentence_transformers import SentenceTransformer
 from sentence_transformers.evaluation import (
     EmbeddingSimilarityEvaluator,
@@ -18,7 +16,6 @@ from sentence_transformers.evaluation import (
 from sentence_transformers.losses import MSELoss
 from sentence_transformers.trainer import SentenceTransformerTrainer
 from sentence_transformers.training_args import SentenceTransformerTrainingArguments
-from sklearn.model_selection import train_test_split
 from transformers import TrainerCallback, TrainerControl, TrainerState
 
 
@@ -313,5 +310,5 @@ if __name__ == "__main__":
         sts_dataset="smartcat/STS_parallel_en_sr",
         num_train_epochs=6,
         batch_size=16,
-        num_evaluation_steps=400
+        num_evaluation_steps=400,
     )

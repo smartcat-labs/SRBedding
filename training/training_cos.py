@@ -1,13 +1,11 @@
 import json
 import logging
-import math
 import random
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from pprint import pprint
 import re
-from typing import List, Tuple
+from typing import Tuple
 
 import pandas
 import pyarrow.parquet as pq
@@ -20,9 +18,8 @@ from sentence_transformers import (
     models,
 )
 from sentence_transformers.evaluation import BinaryClassificationEvaluator
-from sentence_transformers.readers import InputExample
 from sklearn.model_selection import train_test_split
-from transformers import AutoTokenizer, TrainerCallback, TrainerControl, TrainerState
+from transformers import TrainerCallback, TrainerControl, TrainerState
 
 # Set up basic configuration for logging
 logging.basicConfig(level=logging.INFO)

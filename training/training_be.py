@@ -1,11 +1,9 @@
 import json
 import logging
-import math
-import random
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import List, Tuple
+from typing import Tuple
 
 import pandas
 import pyarrow.parquet as pq
@@ -20,7 +18,6 @@ from sentence_transformers.evaluation import (
     EmbeddingSimilarityEvaluator,
     SimilarityFunction,
 )
-from sentence_transformers.readers import InputExample
 from sklearn.model_selection import train_test_split
 from transformers import AutoTokenizer, TrainerCallback, TrainerControl, TrainerState
 

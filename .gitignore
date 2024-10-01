@@ -164,6 +164,7 @@ cython_debug/
 
 # Large files inside of project
 */datasets
+*/datasets2
 *.jsonl
 */results
 */output

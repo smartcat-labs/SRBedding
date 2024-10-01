@@ -1,12 +1,14 @@
-from datetime import datetime
 import json
-import os
+import sys
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 from datasets import load_dataset
-from openai import OpenAI
 from prompts import SYSTEM_PROMPT
+
+sys.path.append("..")
+from utils import make_cache_dir, make_path
+from utils_openAI import batch_requests, save_jobs
 
 
 def make_jobs(
@@ -45,23 +47,6 @@ def make_jobs(
     save_jobs(filename, jobs)
 
 
-def save_jobs(filename: Path, jobs: List[Dict[str, Any]]) -> None:
-    """
-    Saves a list of job dictionaries to a file in JSONL format.
-
-    Args:
-        filename (Path): The file path where the jobs will be saved.
-        jobs (List[Dict[str, Any]]): A list of job dictionaries to be saved.
-
-    Returns:
-        None
-    """
-    with open(filename, "w", encoding="utf-8") as f:
-        for job in jobs:
-            json_string = json.dumps(job, ensure_ascii=False)
-            f.write(json_string + "\n")
-
-
 def load_data_ms_marco(
     data_size: int,
     dataset_name: str = "microsoft/ms_marco",
@@ -81,7 +66,7 @@ def load_data_ms_marco(
     ms_marco = data_test_split.select_columns(["passages", "query", "query_id"])
 
     final_data = []
-    for i in range(1000, data_size):
+    for i in range(0, data_size):
         final_data.append(
             {
                 "query_id": str(ms_marco["query_id"][i]),
@@ -91,16 +76,6 @@ def load_data_ms_marco(
         )
 
     return final_data
-
-
-def make_cache_dir() -> Path:
-    """
-    Creates and returns the cache directory path for storing datasets.
-
-    Returns:
-        Path: The expanded user path to the cache directory.
-    """
-    return Path("~/Datasets/SRBendding").expanduser()
 
 
 def load_data_natural(
@@ -185,57 +160,26 @@ def get_start_and_end_byte(record: Dict[str, Any]) -> Tuple[int, int]:
     return start_byte, end_byte
 
 
-def get_timestamp() -> str:
-    """
-    Returns the current timestamp as a formatted string.
-
-    This function generates the current date and time, formatted as a string in the
-    format 'DD-MM-YYYY_HH-MM-SS'. It can be useful for creating unique filenames
-    or logging events with a timestamp.
-
-    Returns:
-        str: The current timestamp in 'DD-MM-YYYY_HH-MM-SS' format.
-
-    Example:
-        >>> timestamp = get_timestamp()
-        >>> print(timestamp)
-        '18-08-2024_15-45-30'
-    """
-    now = datetime.now()
-    return now.strftime("%d-%m-%Y_%H-%M-%S")
-
-
-def batch_requests(jobs_file: Path, dataset_name: str):
-    batch_file = client.files.create(file=open(jobs_file, "rb"), purpose="batch")
-
-    batch_job = client.batches.create(
-        input_file_id=batch_file.id,
-        endpoint="/v1/chat/completions",
-        completion_window="24h",
-    )
-    print(batch_job.id)
-    file_path = f"commands/number_{dataset_name}.txt"
-
-    # Open the file in write mode and write the number
-    with open(file_path, "w", encoding="utf-8") as file:
-        file.write(batch_job.id)
-
-
 if __name__ == "__main__":
-    client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
     model = "gpt-3.5-turbo-0125"
     datasets = [
-        {"name": "msmarco", "loading_function": load_data_ms_marco, "data_size": 4000},
-        {"name": "naquestions", "loading_function": load_data_natural, "data_size": 4000},
+        {
+            "name": "msmarco", 
+            "loading_function": load_data_ms_marco, 
+            "data_size": 10},
+        {
+            "name": "naquestions",
+            "loading_function": load_data_natural,
+            "data_size": 10,
+        },
     ]
 
     for dataset in datasets:
         # date = get_timestamp()
         dataset_name = dataset["name"]
-
         final_data = dataset["loading_function"](dataset["data_size"])
         path = Path(f"commands/jobs_{dataset_name}.jsonl")
-        path.parent.mkdir(parents=True, exist_ok=True)
+        make_path(path.parent)
 
         make_jobs(model=model, prompt=SYSTEM_PROMPT, filename=path, dataset=final_data)
 

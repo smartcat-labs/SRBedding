@@ -7,19 +7,10 @@ from typing import Dict, List
 import numpy as np
 import pandas as pd
 from openai import OpenAI
-from pprint import pprint
 
 sys.path.append("..")
-
-
-def save_failed_ids(failed: List[Dict[str, str]], dataset_name: str) -> None:
-    file_path = Path(f"failed/failed_{dataset_name}.json")
-    file_path.parent.mkdir(parents=True, exist_ok=True)
-    # Write the IDs to a text file, one per line
-    with open(file_path, "w") as f:
-        # Convert exceptions to string because exceptions are not JSON serializable
-        json.dump(failed, f, default=str, indent=4)
-
+from utils_openAI import save_failed_ids, get_batch_id
+from utils import make_path
 
 def make_dataset(
     processed_commands_path: Path, dataset_name: str
@@ -55,20 +46,13 @@ def make_dataset(
 
 def save_in_file(processed_commands_path: Path, save_path: Path) -> None:
     data_for_df = make_dataset(processed_commands_path, save_path.stem)
-    save_path.parent.mkdir(parents=True, exist_ok=True)
+    make_path(save_path.parent)
     dataset = pd.DataFrame(data_for_df)
-    # dataset['id'] = dataset['id'].astype(str)
-    # dataset['query'] = dataset['query'].astype(str)
     dataset["passage_text"] = dataset["passage_text"].apply(
         lambda x: np.array(x, dtype=str)
     )
     dataset.to_parquet(save_path, engine="pyarrow")
 
-
-def get_batch_id(file: Path) -> str:
-    with open(file, "r") as file:
-        text = file.read()
-    return text.strip()
 
 
 if __name__ == "__main__":

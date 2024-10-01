@@ -1,6 +1,5 @@
 import json
 import logging
-import math
 import random
 from datetime import datetime
 from enum import Enum
@@ -19,8 +18,7 @@ from sentence_transformers import (
 )
 from sentence_transformers.evaluation import InformationRetrievalEvaluator
 from sentence_transformers.readers import InputExample
-from transformers import AutoTokenizer, TrainerCallback, TrainerControl, TrainerState
-from pprint import pprint
+from transformers import TrainerCallback, TrainerControl, TrainerState
 
 # Set up basic configuration for logging
 logging.basicConfig(level=logging.INFO)
@@ -141,7 +139,9 @@ def hpo_search_space(trial):
 
 
 def hpo_model_init(trial):
-    word_embedding_model = models.Transformer("mixedbread-ai/mxbai-embed-large-v1", max_seq_length=512)
+    word_embedding_model = models.Transformer(
+        "mixedbread-ai/mxbai-embed-large-v1", max_seq_length=512
+    )
     # Apply mean pooling to get one fixed sized sentence vector
     pooling_model = models.Pooling(
         word_embedding_model.get_word_embedding_dimension(),
@@ -216,22 +216,16 @@ def make_dirs(model_save_path):
     model_save_path.mkdir(exist_ok=True, parents=True)
 
 
-def main_pipeline(
-   dataset_name: Path
-):
+def main_pipeline(dataset_name: Path):
     train_dataset, eval_dataset = get_train_and_eval_datasets(dataset_name)
     model_save_path = Path(
         f'output/bi_encoder_{datetime.now().strftime("%d-%m-%Y_%H-%M-%S")}'
     )
     make_dirs(model_save_path)
-    train_bi_encoder(
-        train_dataset, eval_dataset, model_save_path
-    )
+    train_bi_encoder(train_dataset, eval_dataset, model_save_path)
 
 
-def train_bi_encoder(
-    train_dataset, eval_dataset, model_save_path
-):
+def train_bi_encoder(train_dataset, eval_dataset, model_save_path):
     # warmup_steps = math.ceil(len(train_dataset) * num_epochs * 0.1)
 
     args = SentenceTransformerTrainingArguments(
@@ -263,6 +257,4 @@ def train_bi_encoder(
 
 
 if __name__ == "__main__":
-    main_pipeline(
-        Path("datasets/TRAIN11k_fixed.parquet")
-    )
+    main_pipeline(Path("datasets/TRAIN11k_fixed.parquet"))

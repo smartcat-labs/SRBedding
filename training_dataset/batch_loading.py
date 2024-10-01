@@ -1,6 +1,7 @@
 import json
 import os
 from pathlib import Path
+import sys
 from typing import Dict, List
 
 import openai
@@ -8,10 +9,12 @@ import pandas as pd
 
 from datasets_loading import get_datasets
 
+sys.path.append("..")
+from utils_openAI import save_failed_ids, get_batch_id
 
 def make_dataset(
     processed_commands_path: Path,
-    contexts: List[str],
+    contexts: Dict[str, str],
     save_path: Path,
     dataset_name: str,
 ) -> None:
@@ -56,23 +59,8 @@ def make_dataset(
     dataset.to_parquet(save_path, engine="pyarrow")
 
 
-def save_failed_ids(failed, dataset_name):
-    file_path = Path(f"datasets/failed_{dataset_name}.json")
-
-    # Write the IDs to a text file, one per line
-    with open(file_path, "w") as f:
-        # Convert exceptions to string because exceptions are not JSON serializable
-        json.dump(failed, f, default=str, indent=4)
-
-
-def get_batch_id(file: Path) -> str:
-    with open(file, "r") as file:
-        text = file.read()
-    return text.strip()
-
-
-def load_contexts(dataset_name: str) -> Dict[int, str]:
-    filename = Path(f"datasets/contexts_{dataset_name}_train.json")
+def load_contexts(dataset_name: str) -> Dict[str, str]:
+    filename = Path(f"datasets/contexts_{dataset_name}.json")
 
     with open(filename, "r", encoding="UTF-8") as f:
         sentences_dict = json.load(f)
@@ -83,8 +71,8 @@ def load_contexts(dataset_name: str) -> Dict[int, str]:
 if __name__ == "__main__":
     client = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
     datasets = get_datasets()
-    for dataset_name in datasets.keys():
-        file_path = f"commands/number_{dataset_name}_train.txt"
+    for dataset_name in ["train"]:
+        file_path = f"commands/number_{dataset_name}.txt"
         batch_id = get_batch_id(file=file_path)
 
         batch_job = client.batches.retrieve(batch_id)
