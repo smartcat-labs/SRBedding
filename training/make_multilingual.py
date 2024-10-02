@@ -1,4 +1,3 @@
-import json
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -16,47 +15,19 @@ from sentence_transformers.evaluation import (
 from sentence_transformers.losses import MSELoss
 from sentence_transformers.trainer import SentenceTransformerTrainer
 from sentence_transformers.training_args import SentenceTransformerTrainingArguments
-from transformers import TrainerCallback, TrainerControl, TrainerState
-
-
-def make_path(save_path: str) -> Path:
-    model_save_path = Path(save_path)
-    model_save_path.mkdir(exist_ok=True, parents=True)
-    return model_save_path
-
-
-class EvalLoggingCallback(TrainerCallback):
-    def __init__(self, save_path: str):
-        super().__init__()
-        self.save_path = save_path
-
-    def write_in_log_file(self, logs, json_file):
-        log_file = make_path(f"{self.save_path}/logs")
-        log_file = log_file / json_file
-        with open(log_file, "a") as f:
-            print(logs)
-            f.write(json.dumps(logs))
-            f.write("\n")
-
-    def on_log(
-        self, args, state: TrainerState, control: TrainerControl, logs=None, **kwargs
-    ):
-        _ = logs.pop("total_flos", None)
-
-        if "loss" in logs:
-            self.write_in_log_file(logs, "on_log_1.jsonl")
-        if "train_loss" in logs:
-            self.write_in_log_file(logs, "on_log_2.jsonl")
-
-    def on_evaluate(self, args, state: TrainerState, control: TrainerControl, **kwargs):
-        print("Evaluation started")
-        eval_output = state.log_history[-1]  # Last logged evaluation metrics
-        eval_output["epoch"] = state.epoch
-
-        self.write_in_log_file(eval_output, "on_evaluate.jsonl")
+from training_utils import EvalLoggingCallback
 
 
 def load_datset_with_cashe(dataset_name: str) -> Dataset:
+    """
+    Loads a dataset with caching to a specified directory.
+
+    Args:
+        dataset_name (str): The name of the dataset to be loaded.
+
+    Returns:
+        Dataset: The loaded dataset from the specified dataset name.
+    """
     dir = Path("~/Datasets/SRBendding").expanduser()
 
     dir.mkdir(parents=True, exist_ok=True)
@@ -64,6 +35,23 @@ def load_datset_with_cashe(dataset_name: str) -> Dataset:
 
 
 def get_train_and_eval_datasets(dataset_name: Path) -> Tuple[Dataset, Dataset]:
+    """
+    Loads a dataset from a specified parquet file and splits it into training and evaluation sets.
+
+    Args:
+        dataset_name (Path): The file path of the parquet dataset to be loaded.
+
+    Returns:
+        Tuple[Dataset, Dataset]: A tuple containing two datasets:
+            - train_dataset: The training subset of the dataset.
+            - eval_dataset: The evaluation subset of the dataset.
+
+    This function utilizes the `load_dataset` function from the `datasets` library to read
+    the dataset from the provided parquet file. It then splits the dataset into training
+    and evaluation sets using an 98:2 ratio with a fixed seed for reproducibility.
+    The resulting datasets can be used for model training and evaluation in machine
+    learning tasks.
+    """
     dataset = load_dataset(
         "parquet",
         data_files=dataset_name,
@@ -76,35 +64,74 @@ def get_train_and_eval_datasets(dataset_name: Path) -> Tuple[Dataset, Dataset]:
     return train_dataset, eval_dataset
 
 
-def divide_score_by_5(example:Dataset) -> Dataset:
+def divide_score_by_5(example: Dataset) -> Dataset:
+    """
+    Divides the 'score' field of the provided dataset example by 5 in order to normalize it.
+
+    Args:
+        example (Dataset): A dataset example that contains a 'score' field.
+
+    Returns:
+        Dataset: The modified dataset example with the 'score' field divided by 5.
+    """
     example["score"] = example["score"] / 5.0
     return example
 
 
-def get_sts_dataset(dataset_name:str) -> Dataset:
+def get_sts_dataset(dataset_name: str) -> Dataset:
+    """
+    Loads the STS dataset, normalizes the 'score' field, and returns the training split.
+
+    Args:
+        dataset_name (str): The name of the dataset to load.
+
+    Returns:
+        Dataset: The training portion of the loaded dataset with the 'score' field
+                  normalized by dividing it by 5.
+    Note:
+        Ensure that the specified dataset contains a 'score' field for normalization
+        to be applicable.
+    """
     dataset = load_datset_with_cashe(dataset_name=dataset_name)
     dataset = dataset.map(divide_score_by_5)
     return dataset["train"]
 
 
 def train(
-    teacher_model_name:str,
-    student_model_name:str,
-    train_datset:str,
-    sts_dataset:str,
-    inference_batch_size:int=128,
-    num_train_epochs:int=5,
-    num_evaluation_steps:int=5000,
-    batch_size:int=16,
-):
-    def encode_sentences(examples):
-        # Encode all sentences in the "english" column in batches
-        encoded = teacher_model.encode(
-            examples["english"],
-            batch_size=inference_batch_size,
-        )
-        return {"label": encoded}
+    teacher_model_name: str,
+    student_model_name: str,
+    train_datset: str,
+    sts_dataset: str,
+    num_train_epochs: int = 5,
+    num_evaluation_steps: int = 5000,
+    batch_size: int = 16,
+) -> None:
+    """
+    Trains a student model using a teacher model with Mean Squared Error (MSE) loss
+    and evaluates its performance on multiple datasets.
 
+    Args:
+        teacher_model_name (str): The name or path of the teacher model to use for training.
+        student_model_name (str): The name or path of the student model to train.
+        train_datset (str): The dataset to use for training.
+        sts_dataset (str): The STS dataset to use for evaluation.
+        num_train_epochs (int, optional): The number of training epochs. Defaults to 5.
+        num_evaluation_steps (int, optional): The number of steps between evaluations. Defaults to 5000.
+        batch_size (int, optional): The batch size for training and evaluation. Defaults to 16.
+
+    Returns:
+        None
+
+    This function initializes both the teacher and student models using the provided
+    model names. It prepares the training and evaluation datasets, defines the loss
+    function (Mean Squared Error), and sets up various evaluators, including MSE and
+    translation accuracy evaluators.
+
+    The training process is then executed using the `SentenceTransformerTrainer`,
+    which incorporates logging and saves the final trained student model to the specified
+    output directory. The training is designed for multilingual scenarios, specifically
+    focusing on English-Serbian (en-sr) translations.
+    """
     student_max_seq_length = (
         512  # Student model max. lengths for inputs (number of word pieces)
     )
