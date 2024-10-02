@@ -1,0 +1,10 @@
+[
+    {
+        "id": "4245798066923223457",
+        "exception": "Expecting ',' delimiter: line 3 column 1433 (char 1515)"
+    },
+    {
+        "id": "-331751834641431619",
+        "exception": "Unterminated string starting at: line 3 column 22 (char 86)"
+    }
+]

@@ -125,6 +125,7 @@ def batch_requests(jobs_file: Path, dataset_name: str):
     Returns:
         None
     """
+    environment_setup()
     client = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
     batch_file = client.files.create(file=open(jobs_file, "rb"), purpose="batch")
 
