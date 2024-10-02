@@ -8,7 +8,7 @@ from prompts import SYSTEM_PROMPT
 
 sys.path.append("..")
 from utils import make_cache_dir, make_path
-from utils_openAI import batch_requests, save_jobs, environment_setup
+from utils_openAI import batch_requests, save_jobs
 
 
 def make_jobs(
