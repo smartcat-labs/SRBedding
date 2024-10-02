@@ -17,4 +17,6 @@ Then run
 ## Training dataset creation  
 Run the following commands for creating the training dataset:    
 - `cd training-dataset`  
-- `python .\training_dataset_generation.py`  
+- `python .\main_training.py`  
+- `python .\batch_loading.py`  
+The .parquet files will be saved in the datasets folder.
