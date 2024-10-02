@@ -17,9 +17,9 @@ from sentence_transformers import (
     models,
 )
 from sentence_transformers.evaluation import (
+    EmbeddingSimilarityEvaluator,
     InformationRetrievalEvaluator,
     SequentialEvaluator,
-    EmbeddingSimilarityEvaluator,
 )
 from sentence_transformers.training_args import BatchSamplers, MultiDatasetBatchSamplers
 from sklearn.model_selection import train_test_split
@@ -49,7 +49,6 @@ def load_pandas_df(file: Path) -> pandas.DataFrame:
 def convert_to_mnrl_hf_dataset(
     dataframe: pandas.DataFrame, question_type: str
 ) -> Dataset:
-    # Convert each InputExample into a dictionary
     data_dict = {
         "anchor": [],
         "positive": [],
@@ -57,21 +56,18 @@ def convert_to_mnrl_hf_dataset(
     for _, row in dataframe.iterrows():
         data_dict["anchor"].append(row[question_type])
         data_dict["positive"].append(row["context"])
-    # Create a Hugging Face Dataset
     return Dataset.from_dict(data_dict)
 
 
 def convert_to_cosine_hf_dataset(
     dataframe: pandas.DataFrame, question_type: str
 ) -> Dataset:
-    # Convert each InputExample into a dictionary
     data_dict = {"sentence1": [], "sentence2": [], "score": []}
     for _, row in dataframe.iterrows():
         score = float(row["scores"][question_type]) / 5.0
         data_dict["sentence1"].append(row[question_type])
         data_dict["sentence2"].append(row["context"])
         data_dict["score"].append(score)
-    # Create a Hugging Face Dataset
     return Dataset.from_dict(data_dict)
 
 
@@ -171,10 +167,7 @@ def train_a_model(
 
     mnrl_train_loss = losses.MultipleNegativesRankingLoss(model=sentence_transformer)
     cosine_train_loss = losses.CosineSimilarityLoss(model=sentence_transformer)
-    # train_loss = losses.MatryoshkaLoss(
-    #     sentence_transformer, train_loss, [768, 512, 256, 128, 64]
-    # )
-    # # 6. (Optional) Create an evaluator & evaluate the base model
+
     mnrl_evaluator = make_mnrl_evaluator(
         mnrl_eval_dataset, sentence_transformer, bi_encoder_path
     )
@@ -187,7 +180,6 @@ def train_a_model(
         evaluators, main_score_function=lambda scores: scores[-1]
     )
 
-    # 7. Create a trainer & train
     trainer = SentenceTransformerTrainer(
         model=sentence_transformer,
         args=args,
@@ -208,15 +200,10 @@ def train_a_model(
     )
     trainer.train()
 
-    # # (Optional) Evaluate the trained model on the test set
     make_mnrl_evaluator(mnrl_eval_dataset, sentence_transformer, bi_encoder_path)
     make_cosine_evaluator(mnrl_eval_dataset, sentence_transformer, bi_encoder_path)
 
-    # 8. Save the trained model
     sentence_transformer.save_pretrained(f"{bi_encoder_path}/final_model")
-
-    # 9. (Optional) Push it to the Hugging Face Hub
-    # model.push_to_hub("mpnet-base-all-nli-triplet")
 
 
 def getDictionariesForEval(dataset):
@@ -307,5 +294,8 @@ def train_bi_encoder(num_epochs, batch_size, model_name, dataset_name, model_sav
 
 if __name__ == "__main__":
     main_pipeline(
-        10, 16, "BAAI/bge-base-en-v1.5", Path("datasets/TRAIN11k_fixed_v2.parquet")
+        num_epochs=10,
+        batch_size=16,
+        model_name="BAAI/bge-base-en-v1.5",
+        dataset_name=Path("datasets/TRAIN11k_fixed_v2.parquet"),
     )

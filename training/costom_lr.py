@@ -25,7 +25,6 @@ from transformers import (
     TrainerState,
 )
 
-# Set up basic configuration for logging
 logging.basicConfig(level=logging.INFO)
 
 
@@ -47,7 +46,6 @@ def load_pandas_df(file: Path) -> pandas.DataFrame:
 
 
 def convert_to_hf_dataset(dataframe: pandas.DataFrame, question_type: str) -> Dataset:
-    # Convert each InputExample into a dictionary
     data_dict = {
         "anchor": [],
         "positive": [],
@@ -55,7 +53,6 @@ def convert_to_hf_dataset(dataframe: pandas.DataFrame, question_type: str) -> Da
     for _, row in dataframe.iterrows():
         data_dict["anchor"].append(row[question_type])
         data_dict["positive"].append(row["context"])
-    # Create a Hugging Face Dataset
     return Dataset.from_dict(data_dict)
 
 
@@ -84,22 +81,6 @@ def get_train_and_eval_datasets(
 def make_sentence_transformer(
     model_name: str, max_seq_length: int = 512
 ) -> SentenceTransformer:
-    # tokenizer = AutoTokenizer.from_pretrained(model_name)
-    # tokenizer.model_max_length = max_seq_length  # Set the max length for the model
-    # tokenizer.padding_side = (
-    #     "right"  # You can set "left" if you want to pad on the left side
-    # )
-    # # tokenizer.pad_token = tokenizer.eos_token  # Ensure the pad token is set
-    # model = SentenceTransformer(model_name)
-    # # Add the padding and truncation to the encode method
-    # model.tokenizer = tokenizer
-    # model.tokenizer_kwargs = {
-    #     "padding": "max_length",
-    #     "truncation": True,
-    #     "max_length": max_seq_length,
-    #     "return_tensors": "pt",  # Assuming you want PyTorch tensors as output
-    # }
-    # return model
     word_embedding_model = models.Transformer(model_name, max_seq_length=max_seq_length)
     # Apply mean pooling to get one fixed sized sentence vector
     pooling_model = models.Pooling(
@@ -116,12 +97,6 @@ class EvalLoggingCallback(TrainerCallback):
         super().__init__()
         self.save_path = save_path
 
-    # def on_step_begin(self, args, state, control, **kwargs):
-    #     print("next step")
-    #     print(kwargs['lr_scheduler'])
-    #     # print(kwargs['model'].classifier.out_proj.weight.grad.norm())
-    #     print("end step")
-
     def write_in_log_file(self, logs, json_file):
         log_file = make_path(f"{self.save_path}/logs")
         log_file = log_file / json_file
@@ -134,11 +109,7 @@ class EvalLoggingCallback(TrainerCallback):
         self, args, state: TrainerState, control: TrainerControl, logs=None, **kwargs
     ):
         _ = logs.pop("total_flos", None)
-        # if state.is_local_process_zero:
-        #     print("logs in if")
-        #     print(logs)
 
-        # Capture the last logged metrics
         if "loss" in logs:
             self.write_in_log_file(logs, "on_log_1.jsonl")
         if "train_loss" in logs:
@@ -161,17 +132,39 @@ def train_a_model(
         dataset_name, QueryType.SHORT.value
     )
     train_loss = losses.MultipleNegativesRankingLoss(model=sentence_transformer)
-    # train_loss = losses.MatryoshkaLoss(
-    #     sentence_transformer, train_loss, [768, 512, 256, 128, 64]
-    # )
+
     bi_encoder_path = Path(args.output_dir).parent
-    # # 6. (Optional) Create an evaluator & evaluate the base model
     dev_evaluator = make_evaluator(eval_dataset, sentence_transformer, bi_encoder_path)
 
+    optimizer, scheduler = get_custom_sheduler(
+        sentence_transformer, args, train_dataset
+    )
+
+    # 7. Create a trainer & train
+    trainer = SentenceTransformerTrainer(
+        model=sentence_transformer,
+        args=args,
+        train_dataset=train_dataset,
+        eval_dataset=eval_dataset,
+        loss=train_loss,
+        evaluator=dev_evaluator,
+        callbacks=[EvalLoggingCallback(save_path=bi_encoder_path)],
+        optimizers=(optimizer, scheduler),
+    )
+
+    trainer.train()
+
+    make_evaluator(eval_dataset, sentence_transformer, bi_encoder_path)
+
+    sentence_transformer.save_pretrained(f"{bi_encoder_path}/final_model")
+
+
+def get_custom_sheduler(sentence_transformer, args, train_dataset):
     optimizer = torch.optim.AdamW(sentence_transformer.parameters(), lr=2e-5)
     num_update_steps_per_epoch = len(train_dataset) // args.per_device_train_batch_size
     if len(train_dataset) % args.per_device_train_batch_size != 0:
         num_update_steps_per_epoch += 1
+
     num_training_steps = num_update_steps_per_epoch * args.num_train_epochs
     num_warmup_steps = num_training_steps * 0.2  # Number of steps to warm up
     num_constant_steps = (
@@ -193,30 +186,7 @@ def train_a_model(
 
     # Create the scheduler with warmup
     scheduler = LambdaLR(optimizer, lr_lambda)
-
-    # 7. Create a trainer & train
-    trainer = SentenceTransformerTrainer(
-        model=sentence_transformer,
-        args=args,
-        train_dataset=train_dataset,
-        eval_dataset=eval_dataset,
-        loss=train_loss,
-        evaluator=dev_evaluator,
-        callbacks=[EvalLoggingCallback(save_path=bi_encoder_path)],
-        optimizers=(optimizer, scheduler),
-    )
-
-    trainer.train()
-
-    # # (Optional) Evaluate the trained model on the test set
-    make_evaluator(eval_dataset, sentence_transformer, bi_encoder_path)
-
-    # 8. Save the trained model
-    # TODO da li ovako cuvati
-    sentence_transformer.save_pretrained(f"{bi_encoder_path}/final_model")
-
-    # 9. (Optional) Push it to the Hugging Face Hub
-    # model.push_to_hub("mpnet-base-all-nli-triplet")
+    return optimizer, scheduler
 
 
 def getDictionariesForEval(dataset):
@@ -291,5 +261,8 @@ def train_bi_encoder(num_epochs, batch_size, model_name, dataset_name, model_sav
 
 if __name__ == "__main__":
     main_pipeline(
-        10, 16, "BAAI/bge-base-en-v1.5", Path("datasets/TRAIN11k_fixed_v2.parquet")
+        num_epochs=10,
+        batch_size=16,
+        model_name="BAAI/bge-base-en-v1.5",
+        dataset_name=Path("datasets/TRAIN11k_fixed_v2.parquet"),
     )

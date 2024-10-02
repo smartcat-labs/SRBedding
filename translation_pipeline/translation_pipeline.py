@@ -13,6 +13,8 @@ from prompts import SYSTEM_PROMPT
 
 sys.path.append("..")
 from api_request_parallel_processor import run_api_request_processor
+from utils import make_cache_dir
+from utils_openAI import save_failed_ids, save_jobs
 
 
 def make_jobs(
@@ -47,23 +49,6 @@ def make_jobs(
     save_jobs(filename, jobs)
 
 
-def save_jobs(filename: Path, jobs: List[Dict[str, Any]]) -> None:
-    """
-    Saves a list of job dictionaries to a file in JSONL format.
-
-    Args:
-        filename (Path): The file path where the jobs will be saved.
-        jobs (List[Dict[str, Any]]): A list of job dictionaries to be saved.
-
-    Returns:
-        None
-    """
-    with open(filename, "w", encoding="utf-8") as f:
-        for job in jobs:
-            json_string = json.dumps(job, ensure_ascii=False)
-            f.write(json_string + "\n")
-
-
 def load_data_ms_marco(
     loading_size,
     dataset_name: str = "microsoft/ms_marco",
@@ -93,25 +78,6 @@ def load_data_ms_marco(
         )
 
     return final_data
-
-
-def make_cache_dir() -> Path:
-    """
-    Creates and returns the cache directory path for storing datasets.
-
-    Returns:
-        Path: The expanded user path to the cache directory.
-    """
-    return Path("~/Datasets/SRBendding").expanduser()
-
-
-def save_failed_ids(failed: List[Dict[str, str]], dataset_name: str) -> None:
-    file_path = Path(f"failed/failed_{dataset_name}.json")
-    file_path.parent.mkdir(parents=True, exist_ok=True)
-    # Write the IDs to a text file, one per line
-    with open(file_path, "w") as f:
-        # Convert exceptions to string because exceptions are not JSON serializable
-        json.dump(failed, f, default=str, indent=4)
 
 
 def make_dataset(
@@ -149,8 +115,6 @@ def save_in_file(processed_commands_path: Path, save_path: Path) -> None:
     save_path.parent.mkdir(parents=True, exist_ok=True)
 
     dataset = pd.DataFrame(data_for_df)
-    # dataset['id'] = dataset['id'].astype(str)
-    # dataset['query'] = dataset['query'].astype(str)
     dataset["passage_text"] = dataset["passage_text"].apply(
         lambda x: np.array(x, dtype=str)
     )
@@ -277,6 +241,7 @@ if __name__ == "__main__":
         path.parent.mkdir(parents=True, exist_ok=True)
 
         make_jobs(model=model, prompt=SYSTEM_PROMPT, filename=path, dataset=final_data)
+        
         run_api_request_processor(
             requests_filepath=path,
             save_filepath=commands_filepath,

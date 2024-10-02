@@ -49,13 +49,11 @@ def convert_dataset(
 
 
 def convert_to_hf_dataset(input_examples: List[InputExample]) -> Dataset:
-    # Convert each InputExample into a dictionary
     data_dict = {
         "anchor": [ex.texts[0] for ex in input_examples],
         "positive": [ex.texts[1] for ex in input_examples],
     }
 
-    # Create a Hugging Face Dataset
     return Dataset.from_dict(data_dict)
 
 
@@ -243,11 +241,7 @@ def train_bi_encoder(train_dataset, eval_dataset, model_save_path):
         save_total_limit=2,
         logging_steps=100,
         run_name="proba",  # Will be used in W&B if `wandb` is installed
-        # load_best_model_at_end=True,  # Automatically load the best model at the end of training
-        # metric_for_best_model="eval_loss",  # Assuming you're using loss as the evaluation metric
-        # greater_is_better=False,
         disable_tqdm=False,
-        # KeyError: "The `metric_for_best_model` training argument is set to 'eval_cosine_loss', which is not found in the evaluation metrics. The available evaluation metrics are: ['eval_loss', 'eval_sts-dev_pearson_cosine', 'eval_sts-dev_spearman_cosine', 'eval_sts-dev_pearson_manhattan', 'eval_sts-dev_spearman_manhattan', 'eval_sts-dev_pearson_euclidean', 'eval_sts-dev_spearman_euclidean', 'eval_sts-dev_pearson_dot', 'eval_sts-dev_spearman_dot', 'eval_sts-dev_pearson_max', 'eval_sts-dev_spearman_max', 'eval_runtime', 'eval_samples_per_second', 'eval_steps_per_second', 'epoch']. Consider changing the `metric_for_best_model` via the TrainingArguments."
     )
     train_a_model(
         args=args,

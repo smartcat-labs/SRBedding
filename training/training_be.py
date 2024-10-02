@@ -30,6 +30,7 @@ class QueryType(Enum):
     MEDIUM = "medium_query"
     LONG = "long_query"
 
+
 def make_path(save_path: str):
     model_save_path = Path(save_path)
     model_save_path.mkdir(exist_ok=True, parents=True)
@@ -42,7 +43,6 @@ def load_pandas_df(file: Path) -> pandas.DataFrame:
 
 
 def convert_to_hf_dataset(dataframe: pandas.DataFrame, question_type: str) -> Dataset:
-    # Convert each InputExample into a dictionary
     data_dict = {"sentence1": [], "sentence2": [], "score": []}
     for inx, row in dataframe.iterrows():
         dataframe_size = len(dataframe)
@@ -60,7 +60,6 @@ def convert_to_hf_dataset(dataframe: pandas.DataFrame, question_type: str) -> Da
         data_dict["sentence1"].append(context)
         data_dict["sentence2"].append(negative)
         data_dict["score"].append(0)
-    # Create a Hugging Face Dataset
     return Dataset.from_dict(data_dict)
 
 
@@ -89,21 +88,12 @@ def get_train_and_eval_datasets(
 def make_sentence_transformer(
     model_name: str, max_seq_length: int = 512
 ) -> SentenceTransformer:
-    # word_embedding_model = models.Transformer(model_name, max_seq_length=max_seq_length)
-    # # Apply mean pooling to get one fixed sized sentence vector
-    # pooling_model = models.Pooling(word_embedding_model.get_word_embedding_dimension(),
-    #                             pooling_mode_cls_token=False,
-    #                             pooling_mode_max_tokens=False,
-    #                             pooling_mode_mean_tokens=True)
-    # return SentenceTransformer(modules=[word_embedding_model, pooling_model])
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     tokenizer.model_max_length = max_seq_length  # Set the max length for the model
     tokenizer.padding_side = (
         "right"  # You can set "left" if you want to pad on the left side
     )
-    # tokenizer.pad_token = tokenizer.eos_token  # Ensure the pad token is set
     model = SentenceTransformer(model_name)
-    # Add the padding and truncation to the encode method
     model.tokenizer = tokenizer
     model.tokenizer_kwargs = {
         "padding": "max_length",
@@ -119,12 +109,6 @@ class EvalLoggingCallback(TrainerCallback):
         super().__init__()
         self.save_path = save_path
 
-    # def on_step_begin(self, args, state, control, **kwargs):
-    #     print("next step")
-    #     print(kwargs['lr_scheduler'])
-    #     # print(kwargs['model'].classifier.out_proj.weight.grad.norm())
-    #     print("end step")
-
     def write_in_log_file(self, logs, json_file):
         log_file = make_path(f"{self.save_path}/logs")
         log_file = log_file / json_file
@@ -137,11 +121,7 @@ class EvalLoggingCallback(TrainerCallback):
         self, args, state: TrainerState, control: TrainerControl, logs=None, **kwargs
     ):
         _ = logs.pop("total_flos", None)
-        # if state.is_local_process_zero:
-        #     print("logs in if")
-        #     print(logs)
 
-        # Capture the last logged metrics
         if "loss" in logs:
             self.write_in_log_file(logs, "on_log_1.jsonl")
         if "train_loss" in logs:
@@ -154,6 +134,7 @@ class EvalLoggingCallback(TrainerCallback):
 
         self.write_in_log_file(eval_output, "on_evaluate.jsonl")
 
+
 def train_a_model(
     sentence_transformer: SentenceTransformer,
     args: SentenceTransformerTrainingArguments,
@@ -161,14 +142,10 @@ def train_a_model(
     eval_dataset,
 ):
     train_loss = losses.CosineSimilarityLoss(model=sentence_transformer)
-    # train_loss = losses.MatryoshkaLoss(
-    #     sentence_transformer, train_loss, [768, 512, 256, 128, 64]
-    # )
+
     eval_path = Path(args.output_dir)
-    # # 6. (Optional) Create an evaluator & evaluate the base model
     dev_evaluator = make_evaluator(eval_dataset, sentence_transformer, eval_path.parent)
 
-    # 7. Create a trainer & train
     trainer = SentenceTransformerTrainer(
         model=sentence_transformer,
         args=args,
@@ -180,15 +157,9 @@ def train_a_model(
     )
     trainer.train()
 
-    # # (Optional) Evaluate the trained model on the test set
     make_evaluator(eval_dataset, sentence_transformer, eval_path.parent)
 
-    # 8. Save the trained model
-    # TODO da li ovako cuvati
     sentence_transformer.save_pretrained(f"{eval_path.parent}/final_model")
-
-    # 9. (Optional) Push it to the Hugging Face Hub
-    # model.push_to_hub("mpnet-base-all-nli-triplet")
 
 
 def make_evaluator(dataset, sentence_transformer, savePath: Path):
@@ -209,19 +180,13 @@ def make_evaluator(dataset, sentence_transformer, savePath: Path):
 def main_pipeline(
     num_epochs: int, batch_size: int, model_name: str, dataset_name: Path
 ):
-
     model_save_path = make_path(
         f'output/bi_encoder_{datetime.now().strftime("%d-%m-%Y_%H-%M-%S")}'
     )
-    train_bi_encoder(
-        num_epochs, batch_size, model_name, dataset_name, model_save_path
-    )
+    train_bi_encoder(num_epochs, batch_size, model_name, dataset_name, model_save_path)
 
 
-def train_bi_encoder(
-    num_epochs, batch_size, model_name, dataset_name, model_save_path
-):
-
+def train_bi_encoder(num_epochs, batch_size, model_name, dataset_name, model_save_path):
     args = SentenceTransformerTrainingArguments(
         # Required parameter:
         output_dir=f"{model_save_path}/model",
@@ -232,7 +197,7 @@ def train_bi_encoder(
         gradient_accumulation_steps=2,
         learning_rate=2e-5,
         lr_scheduler_type="constant_with_warmup",
-        lr_scheduler_kwargs={'last_epoch': 4},
+        lr_scheduler_kwargs={"last_epoch": 4},
         weight_decay=0.01,
         warmup_ratio=0.1,
         fp16=True,  # Set to False if you get an error that your GPU can't run on FP16
@@ -250,7 +215,7 @@ def train_bi_encoder(
         metric_for_best_model="eval_loss",  # Assuming you're using loss as the evaluation metric
         greater_is_better=False,
         disable_tqdm=False,
-       )
+    )
     train_a_model(
         sentence_transformer=make_sentence_transformer(model_name),
         args=args,
@@ -260,5 +225,8 @@ def train_bi_encoder(
 
 if __name__ == "__main__":
     main_pipeline(
-        10, 16, "BAAI/bge-base-en-v1.5", Path("datasets/TRAIN11k_fixed_v2.parquet")
+        num_epochs=10,
+        batch_size=16,
+        model_name="BAAI/bge-base-en-v1.5",
+        dataset_name=Path("datasets/TRAIN11k_fixed_v2.parquet"),
     )

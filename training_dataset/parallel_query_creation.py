@@ -8,14 +8,14 @@ from typing import List
 import openai
 import pandas as pd
 from dotenv import load_dotenv
-
-sys.path.append("..")
 from query_prompt import PROMPT
 
+sys.path.append("..")
 from api_request_parallel_processor import run_api_request_processor
+from utils_openAI import save_jobs
 
 
-def save_jobs(
+def make_jobs(
     sentences: List[str],
     filename: Path,
     prompt_template: str,
@@ -60,10 +60,7 @@ def save_jobs(
         }
         for index, sentence in enumerate(sentences)
     ]
-    with open(filename, "w", encoding="UTF-8") as f:
-        for job in jobs:
-            json_string = json.dumps(job, ensure_ascii=False)
-            f.write(json_string + "\n")
+    save_jobs(filename=filename, jobs=jobs)
 
 
 def make_dataset(
@@ -168,7 +165,7 @@ def generate_query(contexts: List[str], save_filepath: Path):
     command_path.parent.mkdir(parents=True, exist_ok=True)
     save_filepath.parent.mkdir(parents=True, exist_ok=True)
 
-    save_jobs(contexts, command_path, PROMPT)
+    make_jobs(contexts, command_path, PROMPT)
     run_api_request_processor(
         requests_filepath=command_path,
         save_filepath=processed_command_path,

@@ -163,10 +163,7 @@ def get_start_and_end_byte(record: Dict[str, Any]) -> Tuple[int, int]:
 if __name__ == "__main__":
     model = "gpt-3.5-turbo-0125"
     datasets = [
-        {
-            "name": "msmarco", 
-            "loading_function": load_data_ms_marco, 
-            "data_size": 10},
+        {"name": "msmarco", "loading_function": load_data_ms_marco, "data_size": 10},
         {
             "name": "naquestions",
             "loading_function": load_data_natural,

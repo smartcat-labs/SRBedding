@@ -1,11 +1,11 @@
 import json
 import os
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
 import openai
 from dotenv import load_dotenv
+
 from utils import make_path
 
 
@@ -35,9 +35,7 @@ def get_batch_id(file: Path) -> str:
 def save_failed_ids(failed: List[Dict[str, str]], dataset_name: str) -> None:
     file_path = Path(f"failed/failed_{dataset_name}.json")
     make_path(file_path.parent)
-    # Write the IDs to a text file, one per line
     with open(file_path, "w") as f:
-        # Convert exceptions to string because exceptions are not JSON serializable
         json.dump(failed, f, default=str, indent=4)
 
 
@@ -59,7 +57,10 @@ def save_jobs(filename: Path, jobs: List[Dict[str, Any]]) -> None:
 
 
 def make_jobs(
-    prompt: str, filename: Path, dataset: List[Dict[str, str]], model: str="gpt-3.5-turbo-0125"
+    prompt: str,
+    filename: Path,
+    dataset: List[Dict[str, str]],
+    model: str = "gpt-3.5-turbo-0125",
 ) -> None:
     """
     Creates a list of jobs formatted for an LLM model and saves them to a file.
@@ -106,6 +107,5 @@ def batch_requests(jobs_file: Path, dataset_name: str):
     print(batch_job.id)
     file_path = f"commands/number_{dataset_name}.txt"
 
-    # Open the file in write mode and write the number
     with open(file_path, "w", encoding="utf-8") as file:
         file.write(batch_job.id)

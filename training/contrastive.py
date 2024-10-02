@@ -69,7 +69,6 @@ def convert_to_hf_dataset(input_examples: List[InputExample]) -> Dataset:
 def get_train_and_eval_datasets(
     dataset_name: Path,
 ) -> Tuple[Dataset, Dataset, Dataset, List]:
-    # NOTE francuzi su 70:15:15 ovde je 80:10:10
     df = load_df(file=dataset_name)
     training_samples = convert_dataset(df, "query")
 
@@ -95,22 +94,6 @@ def get_train_and_eval_datasets(
 def make_sentence_transformer(
     model_name: str, max_seq_length: int = 512
 ) -> SentenceTransformer:
-    # tokenizer = AutoTokenizer.from_pretrained(model_name)
-    # tokenizer.model_max_length = max_seq_length  # Set the max length for the model
-    # tokenizer.padding_side = (
-    #     "right"  # You can set "left" if you want to pad on the left side
-    # )
-    # # tokenizer.pad_token = tokenizer.eos_token  # Ensure the pad token is set
-    # model = SentenceTransformer(model_name)
-    # # Add the padding and truncation to the encode method
-    # model.tokenizer = tokenizer
-    # model.tokenizer_kwargs = {
-    #     "padding": "max_length",
-    #     "truncation": True,
-    #     "max_length": max_seq_length,
-    #     "return_tensors": "pt",  # Assuming you want PyTorch tensors as output
-    # }
-    # return model
     word_embedding_model = models.Transformer(model_name, max_seq_length=max_seq_length)
     # Apply mean pooling to get one fixed sized sentence vector
     pooling_model = models.Pooling(
@@ -127,12 +110,6 @@ class EvalLoggingCallback(TrainerCallback):
         super().__init__()
         self.save_path = save_path
 
-    # def on_step_begin(self, args, state, control, **kwargs):
-    #     print("next step")
-    #     print(kwargs['lr_scheduler'])
-    #     # print(kwargs['model'].classifier.out_proj.weight.grad.norm())
-    #     print("end step")
-
     def write_in_log_file(self, logs, json_file):
         log_file = Path(f"{self.save_path}/logs/{json_file}")
         log_file.parent.mkdir(exist_ok=True)
@@ -145,11 +122,7 @@ class EvalLoggingCallback(TrainerCallback):
         self, args, state: TrainerState, control: TrainerControl, logs=None, **kwargs
     ):
         _ = logs.pop("total_flos", None)
-        # if state.is_local_process_zero:
-        #     print("logs in if")
-        #     print(logs)
 
-        # Capture the last logged metrics
         if "loss" in logs:
             self.write_in_log_file(logs, "on_log_1.jsonl")
         if "train_loss" in logs:
@@ -170,14 +143,10 @@ def train_a_model(
     eval_dataset,
 ):
     train_loss = losses.ContrastiveLoss(model=sentence_transformer)
-    # train_loss = losses.MatryoshkaLoss(
-    #     sentence_transformer, train_loss, [768, 512, 256, 128, 64]
-    # )
+
     bi_encoder_path = Path(args.output_dir).parent
-    # # 6. (Optional) Create an evaluator & evaluate the base model
     dev_evaluator = make_evaluator(eval_dataset, sentence_transformer, bi_encoder_path)
 
-    # 7. Create a trainer & train
     trainer = SentenceTransformerTrainer(
         model=sentence_transformer,
         args=args,
@@ -189,15 +158,9 @@ def train_a_model(
     )
     trainer.train()
 
-    # # (Optional) Evaluate the trained model on the test set
     make_evaluator(eval_dataset, sentence_transformer, bi_encoder_path)
 
-    # 8. Save the trained model
-    # TODO da li ovako cuvati
     sentence_transformer.save_pretrained(f"{bi_encoder_path}/final_model")
-
-    # 9. (Optional) Push it to the Hugging Face Hub
-    # model.push_to_hub("mpnet-base-all-nli-triplet")
 
 
 def getDictionariesForEval(dataset):
@@ -205,27 +168,19 @@ def getDictionariesForEval(dataset):
     corpus = {}
     relevant_docs = {}
 
-    # Create a mapping from positive examples to a list of their corresponding anchor indices
     corpus_map = {}
     for index, positive in enumerate(dataset["positive"]):
         if positive not in corpus_map:
             corpus_map[positive] = str(index)
             corpus[str(index)] = positive
 
-    # Build the queries, corpus, and relevant_docs based on the mapping
     for index, (anchor, positive) in enumerate(
         zip(dataset["anchor"], dataset["positive"])
     ):
         query_id = str(index)
         queries[query_id] = anchor
-        # Assign all anchors related to the same positive to the relevant_docs
         if dataset["label"][index] == 1:
             relevant_docs[query_id] = [corpus_map[positive]]
-
-    # pprint(dataset['label'])
-    # pprint(queries)
-    # pprint(corpus)
-    # pprint(relevant_docs)
 
     return queries, corpus, relevant_docs
 
@@ -294,7 +249,6 @@ def train_bi_encoder(
         metric_for_best_model="eval_loss",  # Assuming you're using loss as the evaluation metric
         greater_is_better=False,
         disable_tqdm=False,
-        # KeyError: "The `metric_for_best_model` training argument is set to 'eval_cosine_loss', which is not found in the evaluation metrics. The available evaluation metrics are: ['eval_loss', 'eval_sts-dev_pearson_cosine', 'eval_sts-dev_spearman_cosine', 'eval_sts-dev_pearson_manhattan', 'eval_sts-dev_spearman_manhattan', 'eval_sts-dev_pearson_euclidean', 'eval_sts-dev_spearman_euclidean', 'eval_sts-dev_pearson_dot', 'eval_sts-dev_spearman_dot', 'eval_sts-dev_pearson_max', 'eval_sts-dev_spearman_max', 'eval_runtime', 'eval_samples_per_second', 'eval_steps_per_second', 'epoch']. Consider changing the `metric_for_best_model` via the TrainingArguments."
     )
     train_a_model(
         sentence_transformer=make_sentence_transformer(model_name),
@@ -306,8 +260,8 @@ def train_bi_encoder(
 
 if __name__ == "__main__":
     main_pipeline(
-        10,
-        16,
-        "mixedbread-ai/mxbai-embed-large-v1",
-        Path("datasets/long_query_neg.parquet"),
+        num_epochs=10,
+        batch_size=16,
+        model_name="mixedbread-ai/mxbai-embed-large-v1",
+        dataset_name=Path("datasets/long_query_neg.parquet"),
     )
