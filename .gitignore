@@ -164,9 +164,11 @@ cython_debug/
 
 # Large files inside of project
 */datasets
+*.jsonl
 */results
 */output
 */commands
+*/failed
 
 # MacOS files
 *.DS_Store
