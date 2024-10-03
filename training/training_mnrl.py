@@ -29,22 +29,6 @@ class QueryType(Enum):
     LONG = "long_query"
 
 
-def load_pandas_df(file: Path) -> pd.DataFrame:
-    """
-    Loads a Parquet file and converts it into a Pandas DataFrame.
-
-    Args:
-        file (Path): The path to the Parquet file to be loaded.
-
-    Returns:
-        pd.DataFrame: A DataFrame containing the data from the Parquet file.
-
-    This function reads the specified Parquet file using PyArrow and returns the data as a Pandas DataFrame for further processing.
-    """
-    loaded_table = pq.read_table(file)
-    return loaded_table.to_pandas()
-
-
 def convert_to_hf_dataset(dataframe: pd.DataFrame, question_type: str) -> Dataset:
     """
     Converts a Pandas DataFrame into a Hugging Face Dataset format.
@@ -109,7 +93,7 @@ def get_train_and_eval_datasets(
     with an 80:20 ratio, and converts these DataFrames into Hugging Face Dataset objects for further
     processing in machine learning tasks.
     """
-    df = load_pandas_df(file=dataset_name)
+    df = pd.read_parquet(dataset_name)
     train_df, eval_df = train_test_split(df, test_size=0.2, random_state=42)
     train_dataset = convert_to_hf_dataset(train_df, question_type)
     eval_dataset = convert_to_hf_dataset(eval_df, question_type)
@@ -264,28 +248,6 @@ def make_evaluator(
     return dev_evaluator
 
 
-def main_pipeline(
-    num_epochs: int, batch_size: int, model_name: str, dataset_name: Path
-) -> None:
-    """
-    Executes the main training pipeline for a bi-encoder model.
-
-    Args:
-        num_epochs (int): The number of epochs for training the model.
-        batch_size (int): The batch size for training the model.
-        model_name (str): The name of the pre-trained model to use.
-        dataset_name (Path): The path to the dataset to be used for training.
-
-    This function initializes the output directory based on the current timestamp and calls the
-    `train_bi_encoder` function to train the bi-encoder model with the specified parameters.
-    The model will be saved in the specified output directory upon completion.
-    """
-    model_save_path = make_path(
-        f'output/bi_encoder_{datetime.now().strftime("%d-%m-%Y_%H-%M-%S")}'
-    )
-    train_bi_encoder(num_epochs, batch_size, model_name, dataset_name, model_save_path)
-
-
 def train_bi_encoder(num_epochs, batch_size, model_name, dataset_name, model_save_path):
     """
     Trains a bi-encoder model using specified hyperparameters.
@@ -340,9 +302,13 @@ def train_bi_encoder(num_epochs, batch_size, model_name, dataset_name, model_sav
 
 
 if __name__ == "__main__":
-    main_pipeline(
-        num_epochs=10,
-        batch_size=16,
+    model_save_path = make_path(
+        f'output/bi_encoder_{datetime.now().strftime("%d-%m-%Y_%H-%M-%S")}'
+    )
+    train_bi_encoder(
+        num_epochs=20,
+        batch_size=10,
         model_name="BAAI/bge-base-en-v1.5",
         dataset_name=Path("datasets/TRAIN11k_fixed_v2.parquet"),
+        model_save_path=model_save_path,
     )
