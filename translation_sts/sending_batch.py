@@ -26,8 +26,6 @@ def load_sts_data() -> List[Dict[str, Any]]:
 
     final_data = []
     for i, row in sts_test_df.iterrows():
-        # if i > 10:
-        #     break
         final_data.append(
             {
                 "id": row["sid"],

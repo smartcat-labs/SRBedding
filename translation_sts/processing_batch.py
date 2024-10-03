@@ -64,8 +64,6 @@ def make_final(tranlated_sentences: List[str]) -> pd.DataFrame:
     sts = load_dataset("mteb/stsbenchmark-sts", cache_dir=datasets_dir)
     sts_test_df = pd.DataFrame(sts["test"])
     for i, row in sts_test_df.iterrows():
-        # if i > 10:
-        #     break
         sid = row["sid"]
         srb = tranlated_sentences[sid]
         sts_test_df.at[i, "sentence2"] = srb  # Modify the 'sentence2' column directly
